@@ -30,6 +30,9 @@ openapi.json
 .env.local
 .env.*.local
 
+# --- Deploy tooling (local CLI links, never committed) ---
+.vercel/
+
 # --- Editors / OS ---
 .vscode/
 .idea/

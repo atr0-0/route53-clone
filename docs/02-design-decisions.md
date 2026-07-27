@@ -81,6 +81,17 @@ requiring `SameSite=None; Secure` plus a credentialed CORS allow-list (risk R1).
 cookie restrictions bite, the fallback is proxying `/api/*` through a Next.js rewrite to make the
 cookie same-origin.
 
+**Corrected 2026-07-27**: Fly.io now requires a card on file for account verification, even within
+its free allowance. Since a card wasn't available for this deployment, the live demo's backend runs
+on **PythonAnywhere**'s free tier instead — a real persistent per-account filesystem, so SQLite still
+survives redeploys, satisfying the same requirement this decision was written for. The one adjustment
+that entailed: PythonAnywhere's free web apps are WSGI (Apache/uWSGI), not ASGI, so `backend/wsgi.py`
+bridges FastAPI for that one deployment target — everywhere else (local dev, Docker, and Fly.io if a
+card becomes available later) still runs the app directly over ASGI via uvicorn, unchanged. The
+rewrite-proxy architecture below made this a same-origin cookie regardless of which host serves the
+API, so the `SameSite=None` cross-origin concern this decision anticipated never actually applied in
+practice — the Vercel rewrite keeps the browser talking to one origin throughout.
+
 ---
 
 ## DD-3 — Backend-issued JWT in an httpOnly cookie

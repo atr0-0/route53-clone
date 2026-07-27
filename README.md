@@ -5,8 +5,8 @@ An educational clone of the AWS Route 53 console — built with [Cloudscape](htt
 Route 53 user experience and core hosted-zone/DNS-record workflows; it does not implement real DNS
 resolution. Not affiliated with, endorsed by, or connected to Amazon Web Services.
 
-**Live demo:** frontend — _add your Vercel URL here_ · backend API docs — _add your Fly.io URL +
-`/docs` here_
+**Live demo:** [route67clone.vercel.app](https://route67clone.vercel.app) · backend API docs —
+[atr0.pythonanywhere.com/docs](https://atr0.pythonanywhere.com/docs)
 
 **Demo credentials:** `admin@example.com` / `jane.doe@example.com` / `devops@example.com`, password
 `DemoPass123!` for all three.
