@@ -560,6 +560,18 @@ Pending. This is the **only** source for what remains `[UNVERIFIED]`: table colu
 default visibility, left-nav ordering, TTL quick-set presets, date format, empty-state copy, and the
 zone description field label. Captures land in `docs/reference/`.
 
+**Corrected 2026-07-27**: `08-implementation-plan.md` §6 refers to "the eight screens listed" here —
+that list never actually existed in this section. Named explicitly rather than left dangling:
+
+1. Left nav, fully expanded (nav ordering)
+2. Hosted zones list, populated with a few zones (table columns, default visibility, empty-state copy if captured before creating any)
+3. Create hosted zone form (the description field's real label)
+4. Zone detail — Records tab, populated with a few record types (table columns, date format in the Created column)
+5. Quick create record form, with a type selected that shows a TTL field (TTL quick-set presets)
+6. Edit hosted zone form (cross-check against #3's description label)
+7. Hosted zones list or Records tab with zero non-required rows (empty-state copy, distinct from the no-match state)
+8. Dashboard (real stat-container layout and "recently created" table — needed since this doc's `dashboard` demo row above is still unread)
+
 **What is never a source:** the AWS console's rendered DOM. Mirroring it would yield minified class
 names and hand-rolled markup — worse than clean Cloudscape composition, and it would forfeit the
 free dark mode and accessibility that [DD-1](./02-design-decisions.md#dd-1--aws-cloudscape-design-system-for-the-ui)
