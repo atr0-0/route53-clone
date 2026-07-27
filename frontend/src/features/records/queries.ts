@@ -13,6 +13,8 @@ export interface ListRecordsParams {
   zoneId: string;
   search?: string;
   types?: string[];
+  routingPolicy?: string;
+  alias?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -30,6 +32,8 @@ export function useRecords(params: ListRecordsParams) {
           query: {
             search: params.search || undefined,
             type: params.types?.length ? params.types : undefined,
+            routing_policy: params.routingPolicy || undefined,
+            alias: params.alias,
             page: params.page,
             page_size: params.pageSize,
           },

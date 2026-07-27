@@ -62,15 +62,22 @@ def list_by_zone(
     hosted_zone_id: int,
     search: str | None,
     types: list[str] | None,
+    routing_policy: str | None = None,
+    alias: bool | None = None,
     offset: int,
     limit: int,
 ) -> tuple[list[RecordSet], int]:
     """Search matches name and any value (FR-C4); type is repeatable multi-select
-    (FR-C5)."""
+    (FR-C5). routing_policy and alias are single-value filters matching the
+    Records tab's dedicated dropdowns (docs/reference/04-records-table.png)."""
     filters = []
     filters.append(RecordSet.hosted_zone_id == hosted_zone_id)
     if types:
         filters.append(RecordSet.type.in_(types))
+    if routing_policy:
+        filters.append(RecordSet.routing_policy == routing_policy)
+    if alias is not None:
+        filters.append(RecordSet.alias_target.is_not(None) if alias else RecordSet.alias_target.is_(None))
     if search:
         pattern = f"%{search.lower()}%"
         value_match = RecordSet.id.in_(

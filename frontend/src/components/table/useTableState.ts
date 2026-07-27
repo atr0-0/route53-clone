@@ -18,6 +18,10 @@ export interface TableState {
   setSearch: (text: string) => void;
   type: string;
   setType: (type: string) => void;
+  routingPolicy: string;
+  setRoutingPolicy: (routingPolicy: string) => void;
+  alias: string;
+  setAlias: (alias: string) => void;
   sort: string;
   order: "asc" | "desc";
   setSorting: (sort: string, order: "asc" | "desc") => void;
@@ -40,6 +44,8 @@ export function useTableState(options: TableStateOptions = {}): TableState {
   const [filteringText, setFilteringText] = useState(search);
 
   const type = searchParams.get("type") ?? "";
+  const routingPolicy = searchParams.get("routingPolicy") ?? "";
+  const alias = searchParams.get("alias") ?? "";
   const sort = searchParams.get("sort") ?? options.defaultSort ?? "";
   const order = (searchParams.get("order") === "desc" ? "desc" : "asc") as "asc" | "desc";
   const page = Number(searchParams.get("page") ?? "1") || 1;
@@ -64,6 +70,10 @@ export function useTableState(options: TableStateOptions = {}): TableState {
     setSearch: (value: string) => updateParams({ search: value || null, page: null }),
     type,
     setType: (value: string) => updateParams({ type: value || null, page: null }),
+    routingPolicy,
+    setRoutingPolicy: (value: string) => updateParams({ routingPolicy: value || null, page: null }),
+    alias,
+    setAlias: (value: string) => updateParams({ alias: value || null, page: null }),
     sort,
     order,
     setSorting: (sortField: string, sortOrder: "asc" | "desc") =>

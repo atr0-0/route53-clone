@@ -38,6 +38,8 @@ def list_records(
     zone_id: str,
     search: str | None = None,
     type: list[str] | None = Query(default=None),
+    routing_policy: str | None = None,
+    alias: bool | None = None,
     pagination: PaginationParams = Depends(),
     db: Session = Depends(get_db),
     _current_user: User = Depends(get_current_user),
@@ -48,6 +50,8 @@ def list_records(
         hosted_zone_id=zone.id,
         search=search,
         types=type,
+        routing_policy=routing_policy,
+        alias=alias,
         page=pagination.page,
         page_size=pagination.page_size,
     )

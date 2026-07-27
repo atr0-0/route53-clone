@@ -868,6 +868,8 @@ export interface operations {
             query?: {
                 search?: string | null;
                 type?: string[] | null;
+                routing_policy?: string | null;
+                alias?: boolean | null;
                 page?: number;
                 page_size?: number;
             };

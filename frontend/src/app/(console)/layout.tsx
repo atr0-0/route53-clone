@@ -11,7 +11,9 @@ import Badge from "@cloudscape-design/components/badge";
 import { Mode } from "@cloudscape-design/global-styles";
 import { useSession, useLogout } from "@/features/auth/queries";
 import { useFlashItems, dismissFlash, pushDemoLimitationToast } from "@/lib/notifications";
+import SplitPanel from "@cloudscape-design/components/split-panel";
 import { BreadcrumbsProvider, useBreadcrumbItems } from "@/components/shell/BreadcrumbsContext";
+import { SplitPanelProvider, useSplitPanel } from "@/components/shell/SplitPanelContext";
 import { KeyboardShortcutsProvider } from "@/components/shell/KeyboardShortcutsContext";
 import { useKeyboardShortcuts } from "@/components/shell/useKeyboardShortcuts";
 import { ShortcutsHelpModal } from "@/components/shell/ShortcutsHelpModal";
@@ -96,6 +98,21 @@ function ConsoleShell({ children }: { children: React.ReactNode }) {
   const breadcrumbItems = useBreadcrumbItems();
   const colorMode = useColorMode();
   const { helpOpen, setHelpOpen } = useKeyboardShortcuts();
+  const splitPanel = useSplitPanel();
+  const [splitPanelOpen, setSplitPanelOpen] = useState(false);
+  // Uncontrolled splitPanelSize defaults to ~half the viewport height, which
+  // is tall enough to cover the table rows above it. 260px comfortably fits
+  // the record-detail ColumnLayout while leaving the table visible.
+  const [splitPanelSize, setSplitPanelSize] = useState(260);
+  // Open automatically the moment a page first provides split panel content
+  // (matches the real Records tab, which shows it open by default) without
+  // re-forcing it open on every render — adjusted during render rather than
+  // an effect, same pattern as ConsoleTable's selection reconciliation.
+  const [hadSplitPanel, setHadSplitPanel] = useState(false);
+  if (Boolean(splitPanel) !== hadSplitPanel) {
+    setHadSplitPanel(Boolean(splitPanel));
+    if (splitPanel && !splitPanelOpen) setSplitPanelOpen(true);
+  }
   // Every zone-detail sub-route lives under /hosted-zones — keep that section
   // highlighted throughout rather than only on the exact list URL.
   const activeHref = pathname.startsWith("/hosted-zones") ? "/hosted-zones" : pathname;
@@ -175,6 +192,17 @@ function ConsoleShell({ children }: { children: React.ReactNode }) {
         }
         content={children}
         contentType="table"
+        splitPanelOpen={splitPanelOpen}
+        onSplitPanelToggle={({ detail }) => setSplitPanelOpen(detail.open)}
+        splitPanelSize={splitPanelSize}
+        onSplitPanelResize={({ detail }) => setSplitPanelSize(detail.size)}
+        splitPanel={
+          splitPanel ? (
+            <SplitPanel header={splitPanel.header} hidePreferencesButton>
+              {splitPanel.content}
+            </SplitPanel>
+          ) : undefined
+        }
       />
       <ShortcutsHelpModal visible={helpOpen} onDismiss={() => setHelpOpen(false)} />
     </>
@@ -185,7 +213,9 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
   return (
     <BreadcrumbsProvider>
       <KeyboardShortcutsProvider>
-        <ConsoleShell>{children}</ConsoleShell>
+        <SplitPanelProvider>
+          <ConsoleShell>{children}</ConsoleShell>
+        </SplitPanelProvider>
       </KeyboardShortcutsProvider>
     </BreadcrumbsProvider>
   );

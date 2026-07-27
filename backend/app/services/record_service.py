@@ -21,12 +21,21 @@ def list_records(
     hosted_zone_id: int,
     search: str | None,
     types: list[str] | None,
+    routing_policy: str | None = None,
+    alias: bool | None = None,
     page: int,
     page_size: int,
 ) -> tuple[list[RecordSet], int]:
     offset = (page - 1) * page_size
     return record_set_repo.list_by_zone(
-        session, hosted_zone_id=hosted_zone_id, search=search, types=types, offset=offset, limit=page_size
+        session,
+        hosted_zone_id=hosted_zone_id,
+        search=search,
+        types=types,
+        routing_policy=routing_policy,
+        alias=alias,
+        offset=offset,
+        limit=page_size,
     )
 
 

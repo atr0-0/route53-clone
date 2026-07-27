@@ -1,0 +1,9 @@
+/* Cloudscape's AppLayout manages its own internal scroll regions (nav, content,
+   split panel) and assumes it occupies the full viewport height. Without this,
+   the page grows taller than the viewport and the split panel — fixed to the
+   viewport bottom — ends up overlapping page content instead of docking below it. */
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
