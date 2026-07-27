@@ -10,6 +10,7 @@ resolution. Not affiliated with, endorsed by, or connected to Amazon Web Service
 
 **Demo credentials:** `admin@example.com` / `jane.doe@example.com` / `devops@example.com`, password
 `DemoPass123!` for all three.
+<img width="2553" height="1350" alt="image" src="https://github.com/user-attachments/assets/6b708592-61d4-4fde-87ab-de4c573bc9d9" />
 
 ---
 
