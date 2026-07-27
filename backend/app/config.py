@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     jwt_secret: str
     cors_origins: Annotated[list[str], NoDecode] = []
     demo_mode: bool = True
+    # NFR-2 requires Secure on the session cookie in production (real HTTPS on Fly/
+    # Vercel). Defaults true; set false only for local http://localhost dev, where a
+    # Secure cookie is silently never sent back — confirmed by an actual failing
+    # test, not a hypothetical. See docs/01-requirements.md NFR-11.
+    cookie_secure: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

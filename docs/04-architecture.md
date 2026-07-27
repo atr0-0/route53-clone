@@ -266,6 +266,7 @@ implement it as `frontend/src/proxy.ts` exporting `proxy()`, not `middleware.ts`
 | `CORS_ORIGINS` | backend | Direct `/docs` access only; the browser path is same-origin |
 | `DEMO_MODE` | both | Shows seeded credentials on the login page |
 | `BACKEND_ORIGIN` | frontend | Rewrite target in `next.config.ts` |
+| `COOKIE_SECURE` | backend | Default `true` (`NFR-2`). Set `false` only for local `http://localhost` dev and tests — confirmed by an actual test failure that a `Secure` cookie set over plain HTTP is never returned by the client. Never set `false` in a deployed environment |
 
 **Local development** — `docker compose up` runs both halves against a SQLite volume (`NFR-13`),
 with the same rewrite wiring as production so the auth path is identical in dev and prod. Each half
