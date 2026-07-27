@@ -1,7 +1,15 @@
+from pathlib import Path
 from typing import Annotated
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+# Absolute, not ".env": pydantic-settings resolves a relative env_file against
+# the process's *current working directory*, not this file's location. That's
+# `backend/` for uvicorn locally and Docker (both set it as the working dir),
+# but WSGI hosts (PythonAnywhere's mod_wsgi) run with a different cwd, which
+# silently produced zero loaded settings and a missing-jwt_secret crash there.
+_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -17,7 +25,7 @@ class Settings(BaseSettings):
     # test, not a hypothetical. See docs/01-requirements.md NFR-11.
     cookie_secure: bool = True
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8")
 
     @field_validator("cors_origins", mode="before")
     @classmethod
