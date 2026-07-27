@@ -7,7 +7,7 @@ import { useSyncExternalStore } from "react";
 // list, so this can't live in that page's component state.
 export interface FlashItem {
   id: string;
-  type: "success" | "error";
+  type: "success" | "error" | "info";
   header?: string;
   content: string;
 }
@@ -29,6 +29,16 @@ export function pushFlash(item: Omit<FlashItem, "id">): void {
 export function dismissFlash(id: string): void {
   items = items.filter((item) => item.id !== id);
   emit();
+}
+
+// Shared copy for every mocked/toast-only action across the revamped UI
+// (dashboard feature cards, Register domain, Notifications, the two
+// toast-only nav items) — one string, written once, matching the existing
+// ComingSoon component's tone (components/ComingSoon.tsx).
+const DEMO_LIMITATION_MESSAGE = "This is a demo — only Hosted zones and DNS records are fully functional here.";
+
+export function pushDemoLimitationToast(): void {
+  pushFlash({ type: "info", content: DEMO_LIMITATION_MESSAGE });
 }
 
 function subscribe(listener: () => void): () => void {
