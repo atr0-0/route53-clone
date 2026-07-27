@@ -74,7 +74,7 @@ function LoginPageContent() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {flashItems.length > 0 && (
-        <Box padding={{ horizontal: "xxl", top: "l" }}>
+        <div style={{ position: "fixed", bottom: "24px", right: "24px", width: "400px", maxWidth: "calc(100vw - 48px)", zIndex: 5000 }}>
           <Flashbar
             items={flashItems.map((item) => ({
               id: item.id,
@@ -85,7 +85,7 @@ function LoginPageContent() {
               onDismiss: () => dismissFlash(item.id),
             }))}
           />
-        </Box>
+        </div>
       )}
       <Box padding={{ horizontal: "xxl", vertical: "l" }}>
         <Grid gridDefinition={[{ colspan: 6 }, { colspan: 6 }]}>
@@ -100,7 +100,7 @@ function LoginPageContent() {
         </Grid>
       </Box>
 
-      <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Box padding={{ horizontal: "xxl", vertical: "xl" }}>
           <div style={{ maxWidth: "1100px", margin: "0 auto", width: "100%" }}>
             <Grid gridDefinition={[{ colspan: { default: 12, s: 6 } }, { colspan: { default: 12, s: 6 } }]}>
@@ -179,15 +179,17 @@ function LoginPageContent() {
         </Box>
       </div>
 
-      <Box textAlign="center" padding={{ bottom: "xs" }}>
-        <SpaceBetween direction="horizontal" size="l" alignItems="center">
-          <Link variant="secondary" onFollow={pushDemoLimitationToast}>
-            Privacy
-          </Link>
-          <Link variant="secondary" onFollow={pushDemoLimitationToast}>
-            Terms of use
-          </Link>
-        </SpaceBetween>
+      <Box padding={{ bottom: "xs" }}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <SpaceBetween direction="horizontal" size="l" alignItems="center">
+            <Link variant="secondary" onFollow={pushDemoLimitationToast}>
+              Privacy
+            </Link>
+            <Link variant="secondary" onFollow={pushDemoLimitationToast}>
+              Terms of use
+            </Link>
+          </SpaceBetween>
+        </div>
       </Box>
       <Box textAlign="center" padding={{ top: "n", bottom: "xxl" }} color="text-body-secondary" fontSize="body-s">
         This is an educational clone built with Cloudscape. Not affiliated with, endorsed by, or
