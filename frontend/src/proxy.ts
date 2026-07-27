@@ -14,7 +14,7 @@ export function proxy(request: NextRequest) {
   if (pathname === "/login") {
     if (hasSession) {
       const next = request.nextUrl.searchParams.get("next");
-      return NextResponse.redirect(new URL(next || "/hosted-zones", request.url));
+      return NextResponse.redirect(new URL(next || "/dashboard", request.url));
     }
     return NextResponse.next();
   }

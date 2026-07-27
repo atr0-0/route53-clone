@@ -625,8 +625,11 @@ value-grammar validation.
 Given/When/Then, converting directly into Playwright specs in Phase 4.
 
 **AC-1 (AS-A2, AS-A3, AS-A4)** — Given a seeded user, when they submit valid credentials, then they
-land on Hosted zones; when they reload, then they stay signed in; when signed out and hitting a deep
-link, then they are redirected to login and returned to that link afterwards.
+land on the Dashboard; when they reload, then they stay signed in; when signed out and hitting a deep
+link, then they are redirected to login and returned to that link afterwards. **Corrected
+2026-07-27**: an earlier draft (written before Slice 6's Dashboard existed) had this landing on
+Hosted zones — DD-18 subsequently raised the Dashboard to the real post-sign-in landing page
+(`FR-F2`), and this now matches `08-implementation-plan.md`'s Slice 6 scope.
 
 **AC-2 (AS-H4)** — Given a signed-in user, when they create `example.com`, then it appears with record
 count **2**, its Records tab holds exactly one SOA and one NS set, and the NS set holds four

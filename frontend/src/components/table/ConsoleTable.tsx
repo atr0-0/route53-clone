@@ -7,6 +7,7 @@ import TextFilter from "@cloudscape-design/components/text-filter";
 import Pagination from "@cloudscape-design/components/pagination";
 import CollectionPreferences from "@cloudscape-design/components/collection-preferences";
 import Box from "@cloudscape-design/components/box";
+import Button from "@cloudscape-design/components/button";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 
 function counterText(total: number | undefined, selected: number): string | undefined {
@@ -154,7 +155,22 @@ export function ConsoleTable<T>({
       }
       empty={
         <Box textAlign="center" color="inherit">
-          <b>{filteringText ? "No matches" : emptyText}</b>
+          <SpaceBetween size="xs">
+            <b key="message">{filteringText ? "No matches" : emptyText}</b>
+            {filteringText ? (
+              <Button
+                key="clear"
+                onClick={() => {
+                  onFilteringTextChange("");
+                  onDelayedFilteringTextChange("");
+                }}
+              >
+                Clear filter
+              </Button>
+            ) : (
+              <></>
+            )}
+          </SpaceBetween>
         </Box>
       }
     />

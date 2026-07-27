@@ -36,7 +36,7 @@ export default function CreateRecordPage() {
   const createRecord = useCreateRecord(params.zoneId);
 
   useSetBreadcrumbs([
-    { text: "Route 53", href: "/hosted-zones" },
+    { text: "Route 53", href: "/dashboard" },
     { text: "Hosted zones", href: "/hosted-zones" },
     { text: zone?.name ?? params.zoneId, href: `/hosted-zones/${params.zoneId}` },
     { text: "Create record", href: `/hosted-zones/${params.zoneId}/records/create` },

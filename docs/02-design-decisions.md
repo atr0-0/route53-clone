@@ -284,8 +284,14 @@ cascade delete that destroys a zone *and every record in it* in one click.
 |---|---|
 | Delete one record | Simple Cancel / Delete |
 | Delete an empty zone | Simple Cancel / Delete |
-| Cascade delete a zone and its records | **Type the zone name** |
-| Bulk delete N records | **Type-to-confirm** |
+| Cascade delete a zone and its records | **Type-to-confirm** (`confirm`) |
+| Bulk delete N records | **Type-to-confirm** (`confirm`) |
+
+**Corrected 2026-07-27**: this table originally read "Type the zone name" for the cascade row —
+correct as a first draft, but DD-19 subsequently verified against AWS's own Cloudscape demos that
+the console's actual pattern is typing the literal word `confirm`, not the resource name (the S3/RDS
+pattern this project explicitly didn't choose). `01-requirements.md` AC-4a and
+`07-ui-spec.md` §5.6/§7 were updated at the time; this table was missed and is fixed now.
 
 **Alternatives considered.**
 - *Type-to-confirm on every zone delete.* Consistent, but tedious when the zone is empty anyway.

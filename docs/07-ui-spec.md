@@ -131,7 +131,7 @@ between them — the console's exact structure.
 | `/hosted-zones/[id]/edit` | Edit zone | Full-page `Form`, read-only fields | `FR-B15` |
 | `/hosted-zones/[id]/records/create` | Quick create record | Full-page `Form` | `FR-C9` |
 | `/hosted-zones/[id]/records/[rid]/edit` | Edit record | Full-page `Form` | `FR-C14` |
-| *(15 others)* | Coming Soon | `ComingSoon` in the real shell | `FR-F1` |
+| *(14 others)* | Coming Soon | `ComingSoon` in the real shell | `FR-F1` |
 
 Modals (`FR-E5`): delete record · delete empty zone · **cascade delete** (type-to-confirm) · bulk
 delete (type-to-confirm) · import preview · keyboard shortcut reference.
@@ -309,9 +309,9 @@ high-severity delete pattern** — from `delete-with-additional-confirmation` in
 │  Permanently delete this hosted zone? You        │
 │  can't undo this action.                         │
 │                                                  │
-│  ⚠ Proceeding with this action will delete       │
-│    the hosted zone with all its records and      │
-│    can affect related resources.                 │
+│  ⚠ The specified hosted zone contains            │
+│    non-required resource record sets and so      │
+│    cannot be deleted.                            │
 │                                                  │
 │  To confirm this deletion, type "confirm".       │
 │  [                                    ]          │
@@ -322,7 +322,15 @@ high-severity delete pattern** — from `delete-with-additional-confirmation` in
 
 **The confirmation word is the literal string `confirm`, not the resource name** `[VERIFIED]`.
 Typing the resource name is the S3/RDS pattern; Cloudscape's console pattern — the one AWS uses in
-the demos this app is built on — is `confirm`, matched case-insensitively. Composition:
+the demos this app is built on — is `confirm`, matched case-insensitively.
+
+**Corrected 2026-07-27**: the alert body above shows the verbatim `HostedZoneNotEmpty` API message,
+not the generic *"Proceeding with this action will delete… and can affect related resources"* copy
+from Cloudscape's `delete-with-additional-confirmation` demo (still the source for the modal's
+*structure* — the alert/field/button composition below). `AC-4` specifically requires the modal to
+carry the real error message, which is more informative here than the demo's generic template, so
+this is a deliberate, already-shipped divergence being documented rather than a copy change still
+to make. Composition:
 
 | Element | Value |
 |---|---|
@@ -490,7 +498,8 @@ From Cloudscape's `delete-with-additional-confirmation` demo (§10):
 |---|---|
 | Confirmation word | `confirm` — the literal word, **not** the resource name; matched case-insensitively |
 | Field label | `To confirm this deletion, type "confirm".` |
-| Warning alert | `Proceeding with this action will delete the … with all their content and can affect related resources.` |
+| Warning alert (bulk delete) | `Proceeding with this action will delete the … with all their content and can affect related resources.` |
+| Warning alert (cascade zone delete) | the verbatim `HostedZoneNotEmpty` message (§5.6) — `AC-4` requires the real error, not the generic template above |
 | Modal header | `Delete <resource>` / `Delete <resources>` — pluralised for bulk |
 | Buttons | `Cancel` (`variant="link"`) · `Delete` (`variant="primary"`) |
 

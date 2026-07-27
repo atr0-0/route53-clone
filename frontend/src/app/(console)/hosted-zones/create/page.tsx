@@ -33,7 +33,7 @@ const TAG_EDITOR_I18N_STRINGS: TagEditorProps.I18nStrings = {
 
 export default function CreateHostedZonePage() {
   useSetBreadcrumbs([
-    { text: "Route 53", href: "/hosted-zones" },
+    { text: "Route 53", href: "/dashboard" },
     { text: "Hosted zones", href: "/hosted-zones" },
     { text: "Create hosted zone", href: "/hosted-zones/create" },
   ]);

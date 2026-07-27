@@ -43,7 +43,7 @@ function LoginPageContent() {
       {
         onSuccess: () => {
           const next = searchParams.get("next");
-          router.push(next || "/hosted-zones");
+          router.push(next || "/dashboard");
         },
       }
     );

@@ -7,7 +7,7 @@ export interface BreadcrumbItem {
   href: string;
 }
 
-const DEFAULT_BREADCRUMBS: BreadcrumbItem[] = [{ text: "Route 53", href: "/hosted-zones" }];
+const DEFAULT_BREADCRUMBS: BreadcrumbItem[] = [{ text: "Route 53", href: "/dashboard" }];
 
 interface BreadcrumbsContextValue {
   items: BreadcrumbItem[];
@@ -23,12 +23,18 @@ export function BreadcrumbsProvider({ children }: { children: React.ReactNode })
   );
 }
 
-/** Pages call this with their own trail (FR-B22 — every segment navigable). */
+/**
+ * Pages call this with their own trail (FR-B22 — every segment navigable).
+ * Also tracks the tab title from the trail's last segment (FR-E11):
+ * "Hosted zones | Route 53 | Console".
+ */
 export function useSetBreadcrumbs(items: BreadcrumbItem[]) {
   const ctx = useContext(BreadcrumbsContext);
   const key = items.map((item) => `${item.text}:${item.href}`).join("|");
   useEffect(() => {
     ctx?.setItems(items);
+    const last = items[items.length - 1];
+    if (last) document.title = `${last.text} | Route 53 | Console`;
     return () => ctx?.setItems(DEFAULT_BREADCRUMBS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);

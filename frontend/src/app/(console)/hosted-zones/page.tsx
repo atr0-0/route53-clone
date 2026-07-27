@@ -6,6 +6,7 @@ import Button from "@cloudscape-design/components/button";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import Select from "@cloudscape-design/components/select";
 import Box from "@cloudscape-design/components/box";
+import CopyToClipboard from "@cloudscape-design/components/copy-to-clipboard";
 import ContentLayout from "@cloudscape-design/components/content-layout";
 import Header from "@cloudscape-design/components/header";
 import type { TableProps } from "@cloudscape-design/components/table";
@@ -33,7 +34,7 @@ export default function HostedZonesPage() {
 }
 
 function HostedZonesPageContent() {
-  useSetBreadcrumbs([{ text: "Route 53", href: "/hosted-zones" }, { text: "Hosted zones", href: "/hosted-zones" }]);
+  useSetBreadcrumbs([{ text: "Route 53", href: "/dashboard" }, { text: "Hosted zones", href: "/hosted-zones" }]);
   const router = useRouter();
   const table = useTableState({ defaultSort: "name", defaultPageSize: 10 });
   const [selected, setSelected] = useState<HostedZoneListItem[]>([]);
@@ -59,7 +60,21 @@ function HostedZonesPageContent() {
     { id: "createdBy", header: "Created by", cell: (item) => item.createdBy },
     { id: "recordCount", header: "Record count", sortingField: "recordCount", cell: (item) => item.recordCount },
     { id: "description", header: "Description", cell: (item) => item.description ?? "-" },
-    { id: "zoneId", header: "Hosted zone ID", cell: (item) => <Box fontSize="body-s">{item.zoneId}</Box> },
+    {
+      id: "zoneId",
+      header: "Hosted zone ID",
+      cell: (item) => (
+        <Box fontSize="body-s">
+          <CopyToClipboard
+            copyButtonAriaLabel="Copy hosted zone ID"
+            copySuccessText="Hosted zone ID copied"
+            copyErrorText="Hosted zone ID failed to copy"
+            textToCopy={item.zoneId}
+            variant="inline"
+          />
+        </Box>
+      ),
+    },
   ];
 
   const sortingColumn = columnDefinitions.find((c) => c.sortingField === table.sort);

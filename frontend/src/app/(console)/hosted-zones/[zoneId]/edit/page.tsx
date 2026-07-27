@@ -40,7 +40,7 @@ export default function EditHostedZonePage() {
   const [tags, setTags] = useState<TagEditorProps.Tag[]>([]);
 
   useSetBreadcrumbs([
-    { text: "Route 53", href: "/hosted-zones" },
+    { text: "Route 53", href: "/dashboard" },
     { text: "Hosted zones", href: "/hosted-zones" },
     { text: zone?.name ?? params.zoneId, href: `/hosted-zones/${params.zoneId}` },
     { text: "Edit", href: `/hosted-zones/${params.zoneId}/edit` },

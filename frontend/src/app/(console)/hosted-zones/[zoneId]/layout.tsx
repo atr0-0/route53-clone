@@ -12,6 +12,7 @@ import Button from "@cloudscape-design/components/button";
 import ButtonDropdown from "@cloudscape-design/components/button-dropdown";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import Spinner from "@cloudscape-design/components/spinner";
+import CopyToClipboard from "@cloudscape-design/components/copy-to-clipboard";
 import { useHostedZone } from "@/features/hosted-zones/queries";
 import { ZoneDeleteModal } from "@/features/hosted-zones/components/ZoneDeleteModal";
 import { useSetBreadcrumbs } from "@/components/shell/BreadcrumbsContext";
@@ -32,7 +33,7 @@ export default function ZoneDetailLayout({ children }: { children: React.ReactNo
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   useSetBreadcrumbs([
-    { text: "Route 53", href: "/hosted-zones" },
+    { text: "Route 53", href: "/dashboard" },
     { text: "Hosted zones", href: "/hosted-zones" },
     { text: zone?.name ?? zoneId, href: `/hosted-zones/${zoneId}` },
   ]);
@@ -85,7 +86,13 @@ export default function ZoneDetailLayout({ children }: { children: React.ReactNo
             <ColumnLayout columns={4} variant="text-grid">
               <div>
                 <Box variant="awsui-key-label">Hosted zone ID</Box>
-                <div>{zone.zoneId}</div>
+                <CopyToClipboard
+                  copyButtonAriaLabel="Copy hosted zone ID"
+                  copySuccessText="Hosted zone ID copied"
+                  copyErrorText="Hosted zone ID failed to copy"
+                  textToCopy={zone.zoneId}
+                  variant="inline"
+                />
               </div>
               <div>
                 <Box variant="awsui-key-label">Type</Box>
