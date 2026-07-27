@@ -8,6 +8,10 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string}
       CORS_ORIGINS: http://localhost:3000
       DEMO_MODE: "true"
+      # Local compose serves plain http://localhost — a Secure cookie set over http
+      # is silently never sent back by the browser. Real deployments (Fly/Vercel,
+      # HTTPS) must not set this.
+      COOKIE_SECURE: "false"
     volumes:
       - backend_data:/data
 

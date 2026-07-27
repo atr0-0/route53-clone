@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.core.errors import register_exception_handlers
-from app.routers import auth, health
+from app.routers import auth, health, hosted_zones, records
 
 app = FastAPI(title="Route53 Clone API", version="0.1.0")
 
@@ -23,3 +23,5 @@ register_exception_handlers(app)
 # (06-api-contract.md §1 "Conventions").
 app.include_router(health.router)
 app.include_router(auth.router, prefix="/v1")
+app.include_router(hosted_zones.router, prefix="/v1")
+app.include_router(records.router, prefix="/v1")
