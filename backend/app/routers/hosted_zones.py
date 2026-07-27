@@ -8,13 +8,15 @@ from app.core.pagination import Page, PaginationParams, make_page
 from app.models.hosted_zone import HostedZone
 from app.models.user import User
 from app.repositories import hosted_zone_repo
+from app.schemas.common import ChangeInfo
 from app.schemas.hosted_zone import (
     HostedZoneCreate,
+    HostedZoneCreateResponse,
     HostedZoneDetail,
     HostedZoneListItem,
     HostedZoneUpdate,
 )
-from app.services import hosted_zone_service
+from app.services import generators, hosted_zone_service
 
 router = APIRouter(prefix="/hosted-zones", tags=["hosted-zones"])
 
@@ -68,12 +70,12 @@ def list_hosted_zones(
     return make_page(items, page=pagination.page, page_size=pagination.page_size, total=total)
 
 
-@router.post("", response_model=HostedZoneDetail, status_code=201)
+@router.post("", response_model=HostedZoneCreateResponse, status_code=201)
 def create_hosted_zone(
     body: HostedZoneCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> HostedZoneDetail:
+) -> HostedZoneCreateResponse:
     zone = hosted_zone_service.create_zone(
         db,
         name=body.name,
@@ -82,7 +84,10 @@ def create_hosted_zone(
         description=body.description,
         tags=[tag.model_dump() for tag in body.tags],
     )
-    return _to_detail(zone, count=len(zone.record_sets))
+    detail = _to_detail(zone, count=len(zone.record_sets))
+    return HostedZoneCreateResponse(
+        **detail.model_dump(), change_info=ChangeInfo(**generators.generate_change_info())
+    )
 
 
 @router.get("/{zone_id}", response_model=HostedZoneDetail)

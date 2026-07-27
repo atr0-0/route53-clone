@@ -210,6 +210,13 @@ indexed for. `type` is repeatable for multi-select filtering (`FR-C5`); `page_si
 **`values` is an ordered array on a single item** — the record-set model (`FR-C1`). Three IPs are
 one row, not three.
 
+### `GET /hosted-zones/{zoneId}/records/{recordId}`
+
+**Added 2026-07-27 (Slice 4)** — missing from this contract's original endpoint table (§8 lists
+only list/create/update/delete for records). The edit record page needs one record's current
+values to populate the form, and paging through the list to find it by id doesn't scale. Same
+shape as one item from the list endpoint above. `404 NoSuchRecord` if it doesn't exist.
+
 ### `POST /hosted-zones/{zoneId}/records`
 
 ```json
@@ -314,6 +321,7 @@ shape (`FR-C17`):
 | `DELETE` | `/hosted-zones/{zoneId}?cascade=true` | FR-B18a `[DERIVED]` |
 | `GET` | `/hosted-zones/{zoneId}/records` | FR-C3 – FR-C6 |
 | `POST` | `/hosted-zones/{zoneId}/records` | FR-C9 – FR-C13 |
+| `GET` | `/hosted-zones/{zoneId}/records/{recordId}` | `[DERIVED]` — added Slice 4, for the edit page |
 | `PATCH` | `/hosted-zones/{zoneId}/records/{recordId}` | FR-C14 |
 | `DELETE` | `/hosted-zones/{zoneId}/records/{recordId}` | FR-C15, FR-C16 |
 | `POST` | `/hosted-zones/{zoneId}/records/bulk-delete` | FR-G4 |

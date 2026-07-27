@@ -3,6 +3,20 @@ from sqlalchemy.orm import Session
 
 from app.models.record_set import RecordSet
 from app.models.record_value import RecordValue
+from app.services import generators
+
+_MAX_ID_ATTEMPTS = 5
+
+
+def generate_unique_record_id(session: Session) -> str:
+    """Shared by hosted_zone_service (SOA/apex NS at zone creation) and
+    record_service (user-created records) — one generator, one collision-retry
+    policy, not duplicated per caller."""
+    for _ in range(_MAX_ID_ATTEMPTS):
+        candidate = generators.generate_record_id()
+        if session.scalar(select(RecordSet.id).where(RecordSet.record_id == candidate)) is None:
+            return candidate
+    raise RuntimeError("Could not generate a unique record_id")
 
 
 def create_with_values(
@@ -51,9 +65,8 @@ def list_by_zone(
     offset: int,
     limit: int,
 ) -> tuple[list[RecordSet], int]:
-    """List-only for now (Slice 3) — full record CRUD, validation, and quotas are
-    Slice 4's scope (services/record_service.py). Search matches name and any
-    value (FR-C4); type is repeatable multi-select (FR-C5)."""
+    """Search matches name and any value (FR-C4); type is repeatable multi-select
+    (FR-C5)."""
     filters = []
     filters.append(RecordSet.hosted_zone_id == hosted_zone_id)
     if types:
@@ -76,3 +89,66 @@ def list_by_zone(
     )
     items = list(session.scalars(stmt).all())
     return items, total
+
+
+def get_by_record_id(session: Session, hosted_zone_id: int, record_id: str) -> RecordSet | None:
+    return session.scalar(
+        select(RecordSet).where(
+            RecordSet.hosted_zone_id == hosted_zone_id, RecordSet.record_id == record_id
+        )
+    )
+
+
+def get_by_identity(
+    session: Session, hosted_zone_id: int, name: str, type: str, set_identifier: str
+) -> RecordSet | None:
+    return session.scalar(
+        select(RecordSet).where(
+            RecordSet.hosted_zone_id == hosted_zone_id,
+            RecordSet.name == name,
+            RecordSet.type == type,
+            RecordSet.set_identifier == set_identifier,
+        )
+    )
+
+
+def get_types_at_name(session: Session, hosted_zone_id: int, name: str) -> list[str]:
+    """For the CNAME coexistence check (FR-D3) — every type currently present
+    at this name in this zone."""
+    rows = session.scalars(
+        select(RecordSet.type).where(
+            RecordSet.hosted_zone_id == hosted_zone_id, RecordSet.name == name
+        )
+    ).all()
+    return list(rows)
+
+
+def count_by_zone(session: Session, hosted_zone_id: int) -> int:
+    return session.scalar(
+        select(func.count()).select_from(RecordSet).where(RecordSet.hosted_zone_id == hosted_zone_id)
+    )
+
+
+def count_by_name_type(session: Session, hosted_zone_id: int, name: str, type: str) -> int:
+    return session.scalar(
+        select(func.count())
+        .select_from(RecordSet)
+        .where(
+            RecordSet.hosted_zone_id == hosted_zone_id,
+            RecordSet.name == name,
+            RecordSet.type == type,
+        )
+    )
+
+
+def replace_values(session: Session, record_set: RecordSet, values: list[str]) -> None:
+    for value in list(record_set.values):
+        session.delete(value)
+    session.flush()
+    for ordinal, value in enumerate(values):
+        session.add(RecordValue(record_set_id=record_set.id, value=value, ordinal=ordinal))
+    session.flush()
+
+
+def delete(session: Session, record_set: RecordSet) -> None:
+    session.delete(record_set)

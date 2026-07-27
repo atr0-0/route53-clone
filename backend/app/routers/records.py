@@ -5,8 +5,9 @@ from app.core.deps import get_current_user, get_db
 from app.core.pagination import Page, PaginationParams, make_page
 from app.models.record_set import RecordSet
 from app.models.user import User
-from app.schemas.record import RecordListItem
-from app.services import hosted_zone_service, record_service
+from app.schemas.common import ChangeInfo
+from app.schemas.record import RecordCreate, RecordListItem, RecordMutationResponse, RecordUpdate
+from app.services import generators, hosted_zone_service, record_service
 
 router = APIRouter(prefix="/hosted-zones/{zone_id}/records", tags=["records"])
 
@@ -25,6 +26,13 @@ def _to_list_item(record: RecordSet) -> RecordListItem:
     )
 
 
+def _to_mutation_response(record: RecordSet) -> RecordMutationResponse:
+    return RecordMutationResponse(
+        **_to_list_item(record).model_dump(),
+        change_info=ChangeInfo(**generators.generate_change_info()),
+    )
+
+
 @router.get("", response_model=Page[RecordListItem])
 def list_records(
     zone_id: str,
@@ -34,8 +42,6 @@ def list_records(
     db: Session = Depends(get_db),
     _current_user: User = Depends(get_current_user),
 ) -> dict:
-    """List-only (Slice 3, for the zone detail Records tab / AC-2). Create, update,
-    delete, and validation are Slice 4 (session C)."""
     zone = hosted_zone_service.get_zone(db, zone_id)
     records, total = record_service.list_records(
         db,
@@ -47,3 +53,67 @@ def list_records(
     )
     items = [_to_list_item(r) for r in records]
     return make_page(items, page=pagination.page, page_size=pagination.page_size, total=total)
+
+
+@router.get("/{record_id}", response_model=RecordListItem)
+def get_record(
+    zone_id: str,
+    record_id: str,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> RecordListItem:
+    """Not in the original API contract's endpoint table (which only lists list/
+    create/update/delete for records) — added because the edit page needs to
+    fetch one record's current values without paging through the full list."""
+    zone = hosted_zone_service.get_zone(db, zone_id)
+    record = record_service.get_record_by_id(db, zone.id, record_id)
+    return _to_list_item(record)
+
+
+@router.post("", response_model=RecordMutationResponse, status_code=201)
+def create_record(
+    zone_id: str,
+    body: RecordCreate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> RecordMutationResponse:
+    record = record_service.create_record(
+        db,
+        zone_id=zone_id,
+        name=body.name,
+        type=body.type,
+        values=body.values,
+        ttl=body.ttl,
+        set_identifier=body.set_identifier,
+        routing_policy=body.routing_policy,
+        routing_config=body.routing_config,
+        alias_target=body.alias_target,
+    )
+    return _to_mutation_response(record)
+
+
+@router.patch("/{record_id}", response_model=RecordMutationResponse)
+def update_record(
+    zone_id: str,
+    record_id: str,
+    body: RecordUpdate,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> RecordMutationResponse:
+    record = record_service.update_record(
+        db,
+        zone_id=zone_id,
+        record_id=record_id,
+        fields=body.model_dump(exclude_unset=True),
+    )
+    return _to_mutation_response(record)
+
+
+@router.delete("/{record_id}", status_code=204)
+def delete_record(
+    zone_id: str,
+    record_id: str,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> None:
+    record_service.delete_record(db, zone_id=zone_id, record_id=record_id)

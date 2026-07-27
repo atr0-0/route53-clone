@@ -5,6 +5,7 @@ Computed per zone at creation time, never seeded, stable once generated. Formats
 worked examples these match and the rationale for each choice.
 """
 
+import datetime
 import random
 import string
 
@@ -59,3 +60,13 @@ def generate_soa_value(nameservers: list[str]) -> str:
         f"{primary_ns} {SOA_HOSTMASTER} {serial} "
         f"{SOA_REFRESH} {SOA_RETRY} {SOA_EXPIRE} {SOA_MINIMUM}"
     )
+
+
+def generate_change_info() -> dict:
+    """Mocked change object matching Route53's response shape (FR-C17). Status is
+    always INSYNC — nothing propagates, so nothing is ever PENDING."""
+    return {
+        "id": f"/change/{generate_change_id()}",
+        "status": "INSYNC",
+        "submitted_at": datetime.datetime.now(datetime.timezone.utc),
+    }

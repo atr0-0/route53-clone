@@ -101,7 +101,12 @@ export interface paths {
         get: operations["get_hosted_zone_v1_hosted_zones__zone_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Hosted Zone
+         * @description FR-B18/FR-B18a: 409 HostedZoneNotEmpty unless `cascade=true`, in which
+         *     case every record set, value, and tag is deleted atomically with the zone.
+         */
+        delete: operations["delete_hosted_zone_v1_hosted_zones__zone_id__delete"];
         options?: never;
         head?: never;
         /** Update Hosted Zone */
@@ -115,12 +120,54 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List Records
-         * @description List-only (Slice 3, for the zone detail Records tab / AC-2). Create, update,
-         *     delete, and validation are Slice 4 (session C).
-         */
+        /** List Records */
         get: operations["list_records_v1_hosted_zones__zone_id__records_get"];
+        put?: never;
+        /** Create Record */
+        post: operations["create_record_v1_hosted_zones__zone_id__records_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/hosted-zones/{zone_id}/records/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Record
+         * @description Not in the original API contract's endpoint table (which only lists list/
+         *     create/update/delete for records) — added because the edit page needs to
+         *     fetch one record's current values without paging through the full list.
+         */
+        get: operations["get_record_v1_hosted_zones__zone_id__records__record_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Record */
+        delete: operations["delete_record_v1_hosted_zones__zone_id__records__record_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Record */
+        patch: operations["update_record_v1_hosted_zones__zone_id__records__record_id__patch"];
+        trace?: never;
+    };
+    "/v1/record-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Record Types
+         * @description FR-D6: the single source of truth for all nine grammars, fetched once
+         *     and cached by the frontend — no grammar is ever duplicated in TypeScript.
+         */
+        get: operations["list_record_types_v1_record_types_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -133,6 +180,25 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ChangeInfo
+         * @description Mocked change object every record mutation and zone create returns,
+         *     matching Route53's response shape (FR-C17, 06-api-contract.md §7).
+         */
+        ChangeInfo: {
+            /** Id */
+            id: string;
+            /**
+             * Status
+             * @default INSYNC
+             */
+            status: string;
+            /**
+             * Submittedat
+             * Format: date-time
+             */
+            submittedAt: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -152,6 +218,31 @@ export interface components {
             description?: string | null;
             /** Tags */
             tags?: components["schemas"]["TagInput"][];
+        };
+        /** HostedZoneCreateResponse */
+        HostedZoneCreateResponse: {
+            /** Zoneid */
+            zoneId: string;
+            /** Name */
+            name: string;
+            /** Type */
+            type: string;
+            /** Description */
+            description: string | null;
+            /** Recordcount */
+            recordCount: number;
+            /** Createdby */
+            createdBy: string;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Nameservers */
+            nameServers: string[];
+            /** Tags */
+            tags: components["schemas"]["TagResponse"][];
+            changeInfo: components["schemas"]["ChangeInfo"];
         };
         /** HostedZoneDetail */
         HostedZoneDetail: {
@@ -237,6 +328,38 @@ export interface components {
             /** Total Pages */
             total_pages: number;
         };
+        /** RecordCreate */
+        RecordCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "A" | "AAAA" | "CNAME" | "TXT" | "MX" | "NS" | "PTR" | "SRV" | "CAA";
+            /** Ttl */
+            ttl?: number | null;
+            /** Values */
+            values?: string[];
+            /**
+             * Routingpolicy
+             * @default SIMPLE
+             */
+            routingPolicy: string;
+            /**
+             * Setidentifier
+             * @default
+             */
+            setIdentifier: string;
+            /** Routingconfig */
+            routingConfig?: {
+                [key: string]: unknown;
+            } | null;
+            /** Aliastarget */
+            aliasTarget?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** RecordListItem */
         RecordListItem: {
             /** Recordid */
@@ -259,6 +382,71 @@ export interface components {
             } | null;
             /** Isrequired */
             isRequired: boolean;
+        };
+        /** RecordMutationResponse */
+        RecordMutationResponse: {
+            /** Recordid */
+            recordId: string;
+            /** Name */
+            name: string;
+            /** Type */
+            type: string;
+            /** Routingpolicy */
+            routingPolicy: string;
+            /** Setidentifier */
+            setIdentifier: string;
+            /** Ttl */
+            ttl: number | null;
+            /** Values */
+            values: string[];
+            /** Aliastarget */
+            aliasTarget: {
+                [key: string]: unknown;
+            } | null;
+            /** Isrequired */
+            isRequired: boolean;
+            changeInfo: components["schemas"]["ChangeInfo"];
+        };
+        /** RecordTypeMetadata */
+        RecordTypeMetadata: {
+            /** Type */
+            type: string;
+            /** Pattern */
+            pattern: string;
+            /** Placeholder */
+            placeholder: string;
+            /** Helptext */
+            helpText: string;
+            /** Multivalue */
+            multiValue: boolean;
+            /** Maxvalues */
+            maxValues: number;
+            /** Maxvaluelength */
+            maxValueLength: number;
+            /** Requiresttl */
+            requiresTtl: boolean;
+        };
+        /** RecordTypesResponse */
+        RecordTypesResponse: {
+            /** Items */
+            items: components["schemas"]["RecordTypeMetadata"][];
+        };
+        /** RecordUpdate */
+        RecordUpdate: {
+            /** Values */
+            values?: string[] | null;
+            /** Ttl */
+            ttl?: number | null;
+            /** Routingpolicy */
+            routingPolicy?: string | null;
+            /** Routingconfig */
+            routingConfig?: {
+                [key: string]: unknown;
+            } | null;
+            /** Aliastarget */
+            aliasTarget?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** TagInput */
         TagInput: {
@@ -455,7 +643,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HostedZoneDetail"];
+                    "application/json": components["schemas"]["HostedZoneCreateResponse"];
                 };
             };
             /** @description Validation Error */
@@ -488,6 +676,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HostedZoneDetail"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_hosted_zone_v1_hosted_zones__zone_id__delete: {
+        parameters: {
+            query?: {
+                cascade?: boolean;
+            };
+            header?: never;
+            path: {
+                zone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -567,6 +786,159 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_record_v1_hosted_zones__zone_id__records_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordMutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_record_v1_hosted_zones__zone_id__records__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zone_id: string;
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordListItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_record_v1_hosted_zones__zone_id__records__record_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zone_id: string;
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_record_v1_hosted_zones__zone_id__records__record_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zone_id: string;
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordMutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_record_types_v1_record_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordTypesResponse"];
                 };
             };
         };

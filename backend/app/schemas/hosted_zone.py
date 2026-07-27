@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.common import CamelModel
+from app.schemas.common import CamelModel, ChangeInfo
 
 
 class TagInput(BaseModel):
@@ -45,3 +45,10 @@ class HostedZoneListItem(CamelModel):
 class HostedZoneDetail(HostedZoneListItem):
     name_servers: list[str]
     tags: list[TagResponse]
+
+
+class HostedZoneCreateResponse(HostedZoneDetail):
+    # 06-api-contract.md §7: zone create — like every record mutation — returns a
+    # mocked change object (FR-C17). GET/PATCH/DELETE don't: they aren't DNS
+    # changes (comment/tag edits, deletes), matching real Route53.
+    change_info: ChangeInfo

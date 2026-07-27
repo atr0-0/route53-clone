@@ -2,8 +2,8 @@
 
 Slice 1 starts this file with exactly `create_zone()` — the single code path both
 `seed.py` and the real create endpoint use, so seeded SOA/NS records are produced
-the same way a real create would (Slice 1's acceptance criterion). Slice 3 extends
-this file with list/search/filter/update; delete is Slice 5.
+the same way a real create would (Slice 1's acceptance criterion). Slice 3 adds
+list/search/filter/update; Slice 5 adds delete.
 """
 
 import re
@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import ConflictingDomainExistsError, InvalidInputError, NoSuchHostedZoneError
 from app.models.hosted_zone import HostedZone
-from app.models.record_set import RecordSet
 from app.repositories import hosted_zone_repo, record_set_repo
 from app.services import generators
 
@@ -49,6 +48,13 @@ def _validate_and_normalize_name(name: str) -> str:
         raise InvalidInputError(
             "Domain name may contain any printable ASCII character except space.", field="name"
         )
+
+    # FR-D4: "a hosted zone name may not begin with *" — grouped with the record-
+    # side wildcard rules in that requirement, but this half applies at zone
+    # creation. Missed in Slice 3; added here alongside the record wildcard checks.
+    if normalized.startswith("*"):
+        raise InvalidInputError("A hosted zone name may not begin with *.", field="name")
+
     return normalized
 
 
@@ -58,14 +64,6 @@ def _unique_zone_id(session: Session) -> str:
         if session.scalar(select(HostedZone.id).where(HostedZone.zone_id == candidate)) is None:
             return candidate
     raise RuntimeError("Could not generate a unique zone_id")
-
-
-def _unique_record_id(session: Session) -> str:
-    for _ in range(_MAX_ID_ATTEMPTS):
-        candidate = generators.generate_record_id()
-        if session.scalar(select(RecordSet.id).where(RecordSet.record_id == candidate)) is None:
-            return candidate
-    raise RuntimeError("Could not generate a unique record_id")
 
 
 def create_zone(
@@ -98,7 +96,7 @@ def create_zone(
 
     record_set_repo.create_with_values(
         session,
-        record_id=_unique_record_id(session),
+        record_id=record_set_repo.generate_unique_record_id(session),
         hosted_zone_id=zone.id,
         name=normalized_name,
         type="SOA",
@@ -108,7 +106,7 @@ def create_zone(
     )
     record_set_repo.create_with_values(
         session,
-        record_id=_unique_record_id(session),
+        record_id=record_set_repo.generate_unique_record_id(session),
         hosted_zone_id=zone.id,
         name=normalized_name,
         type="NS",
