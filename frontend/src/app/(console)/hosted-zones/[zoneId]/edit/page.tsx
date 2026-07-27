@@ -83,7 +83,7 @@ export default function EditHostedZonePage() {
           errorText={updateZone.isError ? getApiErrorMessage(updateZone.error) : undefined}
           actions={
             <SpaceBetween direction="horizontal" size="xs">
-              <Button variant="link" onClick={() => router.push(`/hosted-zones/${params.zoneId}`)}>
+              <Button variant="link" formAction="none" onClick={() => router.push(`/hosted-zones/${params.zoneId}`)}>
                 Cancel
               </Button>
               <Button variant="primary" loading={updateZone.isPending}>

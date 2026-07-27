@@ -77,7 +77,7 @@ export default function CreateHostedZonePage() {
           errorText={createZone.isError && !nameError ? getApiErrorMessage(createZone.error) : undefined}
           actions={
             <SpaceBetween direction="horizontal" size="xs">
-              <Button variant="link" onClick={() => router.push("/hosted-zones")}>
+              <Button variant="link" formAction="none" onClick={() => router.push("/hosted-zones")}>
                 Cancel
               </Button>
               <Button variant="primary" loading={createZone.isPending}>
