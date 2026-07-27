@@ -5,14 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Box from "@cloudscape-design/components/box";
 import Container from "@cloudscape-design/components/container";
 import Header from "@cloudscape-design/components/header";
-import Form from "@cloudscape-design/components/form";
 import FormField from "@cloudscape-design/components/form-field";
 import Input from "@cloudscape-design/components/input";
 import Button from "@cloudscape-design/components/button";
 import Alert from "@cloudscape-design/components/alert";
 import SpaceBetween from "@cloudscape-design/components/space-between";
-import Grid from "@cloudscape-design/components/grid";
 import Icon from "@cloudscape-design/components/icon";
+import TopNavigation from "@cloudscape-design/components/top-navigation";
 import { useLogin } from "@/features/auth/queries";
 import { getApiErrorMessage } from "@/lib/api/errors";
 
@@ -51,75 +50,72 @@ function LoginPageContent() {
   }
 
   return (
-    <Box padding={{ vertical: "xxl", horizontal: "l" }}>
-      <Box textAlign="center" padding={{ bottom: "xl" }}>
-        <SpaceBetween size="xs" alignItems="center">
-          <Box variant="h1" fontSize="display-l" fontWeight="bold">
-            Route 53
-          </Box>
-          <Box variant="p" color="text-body-secondary">
-            DNS management console
-          </Box>
-        </SpaceBetween>
-      </Box>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* Same TopNavigation the authenticated console uses (console)/layout.tsx —
+          the dark identity bar carries over from sign-in into the app, rather
+          than inventing separate pre-auth branding. */}
+      <TopNavigation identity={{ title: "Route 53", href: "/login" }} utilities={[]} />
 
-      <Grid gridDefinition={[{ colspan: { default: 12, xs: 6 }, offset: { xs: 3 } }]}>
-        <SpaceBetween size="l">
-          <Container>
-            <SpaceBetween size="l">
-              <Header
-                variant="h2"
-                description="Sign in with your seeded demo account to manage hosted zones and records."
-              >
-                <SpaceBetween direction="horizontal" size="xs" alignItems="center">
-                  <Icon name="lock-private" />
-                  <span>Sign in</span>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Box padding={{ vertical: "xxl", horizontal: "l" }}>
+          <SpaceBetween size="l" alignItems="center">
+            <div style={{ width: "440px", maxWidth: "100%" }}>
+              <Container>
+                <SpaceBetween size="l">
+                  <Header
+                    variant="h2"
+                    description="Sign in with your seeded demo account to manage hosted zones and records."
+                  >
+                    <SpaceBetween direction="horizontal" size="xs" alignItems="center">
+                      <Icon name="lock-private" />
+                      <span>Sign in</span>
+                    </SpaceBetween>
+                  </Header>
+                  <form onSubmit={handleSubmit}>
+                    <SpaceBetween size="l">
+                      {login.isError && (
+                        <Alert type="error">{getApiErrorMessage(login.error)}</Alert>
+                      )}
+                      <FormField label="Email address">
+                        <Input
+                          value={email}
+                          onChange={({ detail }) => setEmail(detail.value)}
+                          type="email"
+                          autoFocus
+                        />
+                      </FormField>
+                      <FormField label="Password">
+                        <Input
+                          value={password}
+                          onChange={({ detail }) => setPassword(detail.value)}
+                          type="password"
+                        />
+                      </FormField>
+                      <Button variant="primary" loading={login.isPending} fullWidth>
+                        Sign in
+                      </Button>
+                    </SpaceBetween>
+                  </form>
                 </SpaceBetween>
-              </Header>
-              <form onSubmit={handleSubmit}>
-                <Form
-                  errorText={login.isError ? getApiErrorMessage(login.error) : undefined}
-                  actions={
-                    <Button variant="primary" loading={login.isPending}>
-                      Sign in
-                    </Button>
-                  }
-                >
-                  <SpaceBetween size="l">
-                    <FormField label="Email">
-                      <Input
-                        value={email}
-                        onChange={({ detail }) => setEmail(detail.value)}
-                        type="email"
-                        autoFocus
-                      />
-                    </FormField>
-                    <FormField label="Password">
-                      <Input
-                        value={password}
-                        onChange={({ detail }) => setPassword(detail.value)}
-                        type="password"
-                      />
-                    </FormField>
-                  </SpaceBetween>
-                </Form>
-              </form>
-            </SpaceBetween>
-          </Container>
+              </Container>
+            </div>
 
-          {DEMO_MODE && (
-            <Alert type="info" header="Demo credentials">
-              Sign in with any of <code>{DEMO_USERS.join(", ")}</code> — password{" "}
-              <code>{DEMO_PASSWORD}</code>
-            </Alert>
-          )}
-        </SpaceBetween>
-      </Grid>
+            {DEMO_MODE && (
+              <div style={{ width: "440px", maxWidth: "100%" }}>
+                <Alert type="info" header="Demo credentials">
+                  Sign in with any of <code>{DEMO_USERS.join(", ")}</code> — password{" "}
+                  <code>{DEMO_PASSWORD}</code>
+                </Alert>
+              </div>
+            )}
+          </SpaceBetween>
+        </Box>
+      </div>
 
-      <Box textAlign="center" padding={{ top: "xxl" }} color="text-body-secondary" fontSize="body-s">
+      <Box textAlign="center" padding={{ vertical: "l", horizontal: "l" }} color="text-body-secondary" fontSize="body-s">
         This is an educational clone built with Cloudscape. Not affiliated with, endorsed by, or
         connected to Amazon Web Services.
       </Box>
-    </Box>
+    </div>
   );
 }

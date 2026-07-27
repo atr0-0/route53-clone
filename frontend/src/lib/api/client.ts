@@ -10,7 +10,11 @@ export const apiClient = createClient<paths>({ baseUrl: "/api" });
 let redirecting = false;
 
 apiClient.use({
-  onResponse({ response }) {
+  onResponse({ response, schemaPath }) {
+    // The login endpoint's own 401 (wrong credentials) is an expected, recoverable
+    // error the login page shows inline — not a session expiry, so it must not
+    // trigger the global redirect-and-reload below.
+    if (schemaPath === "/v1/auth/login") return;
     if (response.status === 401 && !redirecting && typeof window !== "undefined") {
       redirecting = true;
       queryClient.clear();
