@@ -46,3 +46,7 @@ class RecordUpdate(CamelModel):
 
 class RecordMutationResponse(RecordListItem):
     change_info: ChangeInfo
+
+
+class BulkDeleteRequest(CamelModel):
+    record_ids: list[str]

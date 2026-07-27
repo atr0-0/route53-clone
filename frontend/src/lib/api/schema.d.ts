@@ -155,6 +155,23 @@ export interface paths {
         patch: operations["update_record_v1_hosted_zones__zone_id__records__record_id__patch"];
         trace?: never;
     };
+    "/v1/hosted-zones/{zone_id}/records/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bulk Delete Records */
+        post: operations["bulk_delete_records_v1_hosted_zones__zone_id__records_bulk_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/record-types": {
         parameters: {
             query?: never;
@@ -176,10 +193,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/hosted-zones/{zone_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Zone
+         * @description FR-G2. BIND output must re-import cleanly into an empty zone and
+         *     produce an identical record set — the round-trip guarantee in AC-15.
+         */
+        get: operations["export_zone_v1_hosted_zones__zone_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/hosted-zones/{zone_id}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Zone File
+         * @description FR-G3. `dry_run=true` always returns a preview and writes nothing;
+         *     committing with any `rejected` entry returns 422 and creates nothing —
+         *     import is all-or-nothing.
+         */
+        post: operations["import_zone_file_v1_hosted_zones__zone_id__import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BulkDeleteRequest */
+        BulkDeleteRequest: {
+            /** Recordids */
+            recordIds: string[];
+        };
         /**
          * ChangeInfo
          * @description Mocked change object every record mutation and zone create returns,
@@ -294,6 +359,50 @@ export interface components {
             description?: string | null;
             /** Tags */
             tags?: components["schemas"]["TagInput"][] | null;
+        };
+        /**
+         * ImportContentBody
+         * @description Pasted-text alternative to a multipart file upload (06-api-contract.md §6).
+         */
+        ImportContentBody: {
+            /** Content */
+            content: string;
+        };
+        /** ImportCreateItem */
+        ImportCreateItem: {
+            /** Name */
+            name: string;
+            /** Type */
+            type: string;
+            /** Ttl */
+            ttl: number | null;
+            /** Values */
+            values: string[];
+        };
+        /** ImportPreviewResponse */
+        ImportPreviewResponse: {
+            /** Tocreate */
+            toCreate: components["schemas"]["ImportCreateItem"][];
+            /** Skipped */
+            skipped: components["schemas"]["ImportSkippedItem"][];
+            /** Rejected */
+            rejected: components["schemas"]["ImportRejectedItem"][];
+        };
+        /** ImportRejectedItem */
+        ImportRejectedItem: {
+            /** Line */
+            line: number;
+            /** Raw */
+            raw: string;
+            /** Reason */
+            reason: string;
+        };
+        /** ImportSkippedItem */
+        ImportSkippedItem: {
+            /** Line */
+            line: number;
+            /** Reason */
+            reason: string;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -923,6 +1032,39 @@ export interface operations {
             };
         };
     };
+    bulk_delete_records_v1_hosted_zones__zone_id__records_bulk_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_record_types_v1_record_types_get: {
         parameters: {
             query?: never;
@@ -939,6 +1081,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecordTypesResponse"];
+                };
+            };
+        };
+    };
+    export_zone_v1_hosted_zones__zone_id__export_get: {
+        parameters: {
+            query?: {
+                format?: string;
+            };
+            header?: never;
+            path: {
+                zone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_zone_file_v1_hosted_zones__zone_id__import_post: {
+        parameters: {
+            query?: {
+                dry_run?: boolean;
+            };
+            header?: never;
+            path: {
+                zone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportContentBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

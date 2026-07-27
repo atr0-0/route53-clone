@@ -67,8 +67,13 @@ export default function ZoneDetailLayout({ children }: { children: React.ReactNo
                   items={[
                     { id: "test-record", text: "Test record", disabled: true },
                     { id: "import", text: "Import zone file", disabled: true },
-                    { id: "export", text: "Export zone file", disabled: true },
+                    { id: "export", text: "Export zone file" },
                   ]}
+                  onItemClick={({ detail }) => {
+                    if (detail.id === "export") {
+                      window.location.href = `/api/v1/hosted-zones/${zoneId}/export?format=bind`;
+                    }
+                  }}
                 >
                   Actions
                 </ButtonDropdown>

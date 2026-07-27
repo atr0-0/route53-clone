@@ -6,7 +6,7 @@ from app.core.pagination import Page, PaginationParams, make_page
 from app.models.record_set import RecordSet
 from app.models.user import User
 from app.schemas.common import ChangeInfo
-from app.schemas.record import RecordCreate, RecordListItem, RecordMutationResponse, RecordUpdate
+from app.schemas.record import BulkDeleteRequest, RecordCreate, RecordListItem, RecordMutationResponse, RecordUpdate
 from app.services import generators, hosted_zone_service, record_service
 
 router = APIRouter(prefix="/hosted-zones/{zone_id}/records", tags=["records"])
@@ -117,3 +117,13 @@ def delete_record(
     _current_user: User = Depends(get_current_user),
 ) -> None:
     record_service.delete_record(db, zone_id=zone_id, record_id=record_id)
+
+
+@router.post("/bulk-delete", status_code=204)
+def bulk_delete_records(
+    zone_id: str,
+    body: BulkDeleteRequest,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> None:
+    record_service.bulk_delete_records(db, zone_id=zone_id, record_ids=body.record_ids)

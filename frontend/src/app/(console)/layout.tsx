@@ -7,9 +7,14 @@ import TopNavigation from "@cloudscape-design/components/top-navigation";
 import SideNavigation, { type SideNavigationProps } from "@cloudscape-design/components/side-navigation";
 import BreadcrumbGroup from "@cloudscape-design/components/breadcrumb-group";
 import Flashbar from "@cloudscape-design/components/flashbar";
+import { Mode } from "@cloudscape-design/global-styles";
 import { useSession, useLogout } from "@/features/auth/queries";
 import { useFlashItems, dismissFlash } from "@/lib/notifications";
 import { BreadcrumbsProvider, useBreadcrumbItems } from "@/components/shell/BreadcrumbsContext";
+import { KeyboardShortcutsProvider } from "@/components/shell/KeyboardShortcutsContext";
+import { useKeyboardShortcuts } from "@/components/shell/useKeyboardShortcuts";
+import { ShortcutsHelpModal } from "@/components/shell/ShortcutsHelpModal";
+import { useColorMode, toggleColorMode } from "@/lib/theme";
 
 // Reproduces Route53's real console tree (FR-E2, UI spec §3), including
 // sections the brief never names — a short nav is one of the first things
@@ -77,6 +82,8 @@ function ConsoleShell({ children }: { children: React.ReactNode }) {
   const logout = useLogout();
   const flashItems = useFlashItems();
   const breadcrumbItems = useBreadcrumbItems();
+  const colorMode = useColorMode();
+  const { helpOpen, setHelpOpen } = useKeyboardShortcuts();
   // Every zone-detail sub-route lives under /hosted-zones — keep that section
   // highlighted throughout rather than only on the exact list URL.
   const activeHref = pathname.startsWith("/hosted-zones") ? "/hosted-zones" : pathname;
@@ -95,6 +102,12 @@ function ConsoleShell({ children }: { children: React.ReactNode }) {
             text: "N. Virginia",
             iconName: "map",
             ariaLabel: "Region (mocked — selecting a region changes nothing)",
+          },
+          {
+            type: "button",
+            text: colorMode === Mode.Dark ? "☀" : "☾",
+            ariaLabel: colorMode === Mode.Dark ? "Switch to light mode" : "Switch to dark mode",
+            onClick: () => toggleColorMode(),
           },
           {
             type: "menu-dropdown",
@@ -147,6 +160,7 @@ function ConsoleShell({ children }: { children: React.ReactNode }) {
         content={children}
         contentType="table"
       />
+      <ShortcutsHelpModal visible={helpOpen} onDismiss={() => setHelpOpen(false)} />
     </>
   );
 }
@@ -154,7 +168,9 @@ function ConsoleShell({ children }: { children: React.ReactNode }) {
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
   return (
     <BreadcrumbsProvider>
-      <ConsoleShell>{children}</ConsoleShell>
+      <KeyboardShortcutsProvider>
+        <ConsoleShell>{children}</ConsoleShell>
+      </KeyboardShortcutsProvider>
     </BreadcrumbsProvider>
   );
 }

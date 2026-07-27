@@ -80,6 +80,7 @@ def create_record(
     routing_policy: str = "SIMPLE",
     routing_config: dict | None = None,
     alias_target: dict | None = None,
+    commit: bool = True,
 ) -> RecordSet:
     zone = hosted_zone_service.get_zone(session, zone_id)
     normalized_name = _normalize_record_name(name, zone.name)
@@ -124,8 +125,14 @@ def create_record(
         routing_config=routing_config,
         alias_target=alias_target,
     )
-    session.commit()
-    session.refresh(record)
+    if commit:
+        session.commit()
+        session.refresh(record)
+    else:
+        # BIND import (bind/importer.py) creates many records in one
+        # transaction — autoflush still makes this record visible to the next
+        # iteration's duplicate/quota checks without committing early.
+        session.flush()
     return record
 
 
@@ -175,4 +182,18 @@ def delete_record(session: Session, *, zone_id: str, record_id: str) -> None:
     record = get_record_by_id(session, zone.id, record_id)
     semantic.check_not_required(record.is_required)
     record_set_repo.delete(session, record)
+    session.commit()
+
+
+def bulk_delete_records(session: Session, *, zone_id: str, record_ids: list[str]) -> None:
+    """FR-G4: atomic. Every record is fetched and checked before any is
+    deleted, so a required record anywhere in the batch (or an unknown ID)
+    fails the whole request with nothing deleted — the same "validate
+    everything, then commit once" shape as create_record."""
+    zone = hosted_zone_service.get_zone(session, zone_id)
+    records = [get_record_by_id(session, zone.id, record_id) for record_id in record_ids]
+    for record in records:
+        semantic.check_not_required(record.is_required)
+    for record in records:
+        record_set_repo.delete(session, record)
     session.commit()

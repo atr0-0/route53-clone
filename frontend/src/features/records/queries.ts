@@ -121,3 +121,22 @@ export function useDeleteRecord(zoneId: string) {
     },
   });
 }
+
+// FR-G4: atomic on the backend — a required record anywhere in the batch
+// fails the whole request, matching the single-delete guard.
+export function useBulkDeleteRecords(zoneId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (recordIds: string[]) => {
+      const { error } = await apiClient.POST("/v1/hosted-zones/{zone_id}/records/bulk-delete", {
+        params: { path: { zone_id: zoneId } },
+        body: { recordIds },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [RECORDS_KEY] });
+      queryClient.invalidateQueries({ queryKey: ["hosted-zones", "detail", zoneId] });
+    },
+  });
+}

@@ -16,6 +16,7 @@ import { useTableState } from "@/components/table/useTableState";
 import { useHostedZones, type HostedZoneListItem } from "@/features/hosted-zones/queries";
 import { ZoneDeleteModal } from "@/features/hosted-zones/components/ZoneDeleteModal";
 import { useSetBreadcrumbs } from "@/components/shell/BreadcrumbsContext";
+import { useCreateShortcut } from "@/components/shell/KeyboardShortcutsContext";
 
 const TYPE_OPTIONS = [
   { label: "All types", value: "" },
@@ -35,6 +36,7 @@ export default function HostedZonesPage() {
 
 function HostedZonesPageContent() {
   useSetBreadcrumbs([{ text: "Route 53", href: "/dashboard" }, { text: "Hosted zones", href: "/hosted-zones" }]);
+  useCreateShortcut("/hosted-zones/create");
   const router = useRouter();
   const table = useTableState({ defaultSort: "name", defaultPageSize: 10 });
   const [selected, setSelected] = useState<HostedZoneListItem[]>([]);

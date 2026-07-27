@@ -355,7 +355,7 @@ problem until submission.
 Paste, substituting the session letter and slice numbers.
 
 ```
-This is the AWS Route53 Clone assignment (Scaler SDE Fullstack). Phases 1–2 —
+This is the AWS Route53 Clone project. Phases 1–2 —
 requirements and design — are complete and documented in docs/. The specification
 is settled and the reasoning is recorded: do not redesign it.
 

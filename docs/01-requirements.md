@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| **Project** | Scaler SDE Fullstack Assignment — AWS Route53 Clone |
+| **Project** | AWS Route53 Clone — an educational console clone |
 | **Phase** | 1 of 6 — Requirements ([roadmap](./00-sdlc-roadmap.md)) |
-| **Version** | 3 — restructured around the assignment's own asks |
+| **Version** | 3 — restructured around the brief's own asks |
 | **Status** | Draft for review |
-| **Source** | `Scaler_SDE_Fullstack_Assignment_-_AWS_Route53_Clone` (Google Doc), re-read 2026-07-27 |
+| **Source** | Original project brief (Google Doc), re-read 2026-07-27 |
 | **Companion** | [Design decisions log](./02-design-decisions.md) — the *why* behind every choice here |
 
 ## How to read this document
