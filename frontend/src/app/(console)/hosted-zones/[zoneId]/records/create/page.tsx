@@ -12,8 +12,10 @@ import Textarea from "@cloudscape-design/components/textarea";
 import Select from "@cloudscape-design/components/select";
 import Toggle from "@cloudscape-design/components/toggle";
 import Button from "@cloudscape-design/components/button";
+import Link from "@cloudscape-design/components/link";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import ColumnLayout from "@cloudscape-design/components/column-layout";
+import ExpandableSection from "@cloudscape-design/components/expandable-section";
 import Box from "@cloudscape-design/components/box";
 import { useHostedZone } from "@/features/hosted-zones/queries";
 import { useCreateRecord, useRecordTypes } from "@/features/records/queries";
@@ -25,8 +27,51 @@ import {
   TTL_PRESETS,
 } from "@/features/records/constants";
 import { getApiErrorField, getApiErrorMessage } from "@/lib/api/errors";
-import { pushFlash } from "@/lib/notifications";
+import { pushFlash, pushDemoLimitationToast } from "@/lib/notifications";
 import { useSetBreadcrumbs } from "@/components/shell/BreadcrumbsContext";
+
+interface RecordDraft {
+  key: string;
+  namePrefix: string;
+  type: string;
+  isAlias: boolean;
+  aliasTargetType: string;
+  aliasTargetValue: string;
+  valuesText: string;
+  ttl: string;
+  routingPolicy: string;
+  setIdentifier: string;
+  routingConfigValue: string;
+}
+
+function makeDraft(): RecordDraft {
+  return {
+    key: crypto.randomUUID(),
+    namePrefix: "",
+    type: "A",
+    isAlias: false,
+    aliasTargetType: ALIAS_TARGET_TYPES[0].id,
+    aliasTargetValue: "",
+    valuesText: "",
+    ttl: "300",
+    routingPolicy: "SIMPLE",
+    setIdentifier: "",
+    routingConfigValue: "",
+  };
+}
+
+function buildRoutingConfig(draft: RecordDraft, effectiveRoutingPolicy: string): Record<string, string> | null {
+  if (effectiveRoutingPolicy === "SIMPLE" || !draft.routingConfigValue) return null;
+  const key =
+    effectiveRoutingPolicy === "WEIGHTED"
+      ? "weight"
+      : effectiveRoutingPolicy === "LATENCY" || effectiveRoutingPolicy === "GEOLOCATION"
+        ? "region"
+        : effectiveRoutingPolicy === "FAILOVER"
+          ? "failoverRole"
+          : "value";
+  return { [key]: draft.routingConfigValue };
+}
 
 export default function CreateRecordPage() {
   const params = useParams<{ zoneId: string }>();
@@ -42,197 +87,260 @@ export default function CreateRecordPage() {
     { text: "Create record", href: `/hosted-zones/${params.zoneId}/records/create` },
   ]);
 
-  const [namePrefix, setNamePrefix] = useState("");
-  const [type, setType] = useState("A");
-  const [isAlias, setIsAlias] = useState(false);
-  const [aliasTargetType, setAliasTargetType] = useState(ALIAS_TARGET_TYPES[0].id);
-  const [aliasTargetValue, setAliasTargetValue] = useState("");
-  const [valuesText, setValuesText] = useState("");
-  const [ttl, setTtl] = useState("300");
-  const [routingPolicy, setRoutingPolicy] = useState("SIMPLE");
-  const [setIdentifier, setSetIdentifier] = useState("");
-  const [routingConfigValue, setRoutingConfigValue] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [drafts, setDrafts] = useState<RecordDraft[]>(() => [makeDraft()]);
+  const [draftErrors, setDraftErrors] = useState<Record<string, Record<string, string>>>({});
+  const [formError, setFormError] = useState<string | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!zone) return null;
 
-  const grammar = recordTypes?.find((t) => t.type === type);
-  const isNs = type === "NS";
-  const effectiveRoutingPolicy = isNs ? "SIMPLE" : routingPolicy;
-
-  function buildRoutingConfig(): Record<string, string> | null {
-    if (effectiveRoutingPolicy === "SIMPLE" || !routingConfigValue) return null;
-    const key =
-      effectiveRoutingPolicy === "WEIGHTED"
-        ? "weight"
-        : effectiveRoutingPolicy === "LATENCY" || effectiveRoutingPolicy === "GEOLOCATION"
-          ? "region"
-          : effectiveRoutingPolicy === "FAILOVER"
-            ? "failoverRole"
-            : "value";
-    return { [key]: routingConfigValue };
+  function updateDraft(index: number, patch: Partial<RecordDraft>) {
+    setDrafts((prev) => prev.map((draft, i) => (i === index ? { ...draft, ...patch } : draft)));
   }
 
-  function handleSubmit() {
-    setFieldErrors({});
-    createRecord.mutate(
-      {
-        name: namePrefix,
-        type: type as never,
-        ttl: isAlias ? undefined : Number(ttl),
-        values: isAlias ? [] : valuesText.split("\n").map((v) => v.trim()).filter(Boolean),
-        routingPolicy: effectiveRoutingPolicy,
-        setIdentifier: effectiveRoutingPolicy === "SIMPLE" ? "" : setIdentifier,
-        routingConfig: buildRoutingConfig(),
-        aliasTarget: isAlias ? { type: aliasTargetType, target: aliasTargetValue } : null,
-      },
-      {
-        onSuccess: (record) => {
-          pushFlash({ type: "success", content: `Created record ${record.name}` });
-          router.push(`/hosted-zones/${params.zoneId}`);
-        },
-        onError: (error) => {
-          const field = getApiErrorField(error);
-          const message = getApiErrorMessage(error);
-          if (field) setFieldErrors({ [field.split("[")[0]]: message });
-          pushFlash({ type: "error", content: message });
-        },
+  async function handleSubmit() {
+    setDraftErrors({});
+    setFormError(undefined);
+    setIsSubmitting(true);
+    const createdNames: string[] = [];
+    for (let i = 0; i < drafts.length; i++) {
+      const draft = drafts[i];
+      const isNs = draft.type === "NS";
+      const effectiveRoutingPolicy = isNs ? "SIMPLE" : draft.routingPolicy;
+      try {
+        const record = await createRecord.mutateAsync({
+          name: draft.namePrefix,
+          type: draft.type as never,
+          ttl: draft.isAlias ? undefined : Number(draft.ttl),
+          values: draft.isAlias ? [] : draft.valuesText.split("\n").map((v) => v.trim()).filter(Boolean),
+          routingPolicy: effectiveRoutingPolicy,
+          setIdentifier: effectiveRoutingPolicy === "SIMPLE" ? "" : draft.setIdentifier,
+          routingConfig: buildRoutingConfig(draft, effectiveRoutingPolicy),
+          aliasTarget: draft.isAlias ? { type: draft.aliasTargetType, target: draft.aliasTargetValue } : null,
+        });
+        createdNames.push(record.name);
+      } catch (error) {
+        const field = getApiErrorField(error);
+        const message = getApiErrorMessage(error);
+        setDraftErrors({ [draft.key]: field ? { [field.split("[")[0]]: message } : {} });
+        setFormError(
+          drafts.length === 1 ? message : `Record ${i + 1}: ${message} (${createdNames.length} of ${drafts.length} created before this failure)`
+        );
+        pushFlash({ type: "error", content: message });
+        setIsSubmitting(false);
+        return;
       }
-    );
+    }
+    pushFlash({
+      type: "success",
+      content: createdNames.length === 1 ? `Created record ${createdNames[0]}` : `Created ${createdNames.length} records`,
+    });
+    router.push(`/hosted-zones/${params.zoneId}`);
   }
 
   return (
-    <ContentLayout header={<Header variant="h1">Create record</Header>}>
+    <ContentLayout header={<Header variant="h1" info={<Link variant="info" onFollow={pushDemoLimitationToast}>Info</Link>}>Create record</Header>}>
       <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
         <Form
-          errorText={createRecord.isError && Object.keys(fieldErrors).length === 0 ? getApiErrorMessage(createRecord.error) : undefined}
+          errorText={formError}
           actions={
             <SpaceBetween direction="horizontal" size="xs">
-              <Button variant="link" onClick={() => router.push(`/hosted-zones/${params.zoneId}`)}>
+              <Button variant="link" formAction="none" onClick={() => router.push(`/hosted-zones/${params.zoneId}`)}>
                 Cancel
               </Button>
-              <Button variant="primary" loading={createRecord.isPending}>
+              <Button variant="primary" loading={isSubmitting}>
                 Create records
               </Button>
             </SpaceBetween>
           }
         >
-          <Container header={<Header variant="h2">Quick create record</Header>}>
-            <SpaceBetween size="l">
-              <FormField
-                label="Record name"
-                description="Enter the name of the domain or subdomain that you want to route traffic for. The default value is the name of the hosted zone."
-                constraintText="Keep blank to create a record for the root domain."
-                errorText={fieldErrors.name}
+          <Container
+            header={
+              <Header
+                variant="h2"
+                actions={<Link variant="info" onFollow={pushDemoLimitationToast}>Switch to wizard</Link>}
               >
-                <ColumnLayout columns={2}>
-                  <Input value={namePrefix} onChange={({ detail }) => setNamePrefix(detail.value)} />
-                  <Input value={`.${zone.name}`} disabled readOnly />
-                </ColumnLayout>
-              </FormField>
+                Quick create record
+              </Header>
+            }
+          >
+            <SpaceBetween size="l">
+              {drafts.map((draft, index) => {
+                const grammar = recordTypes?.find((t) => t.type === draft.type);
+                const isNs = draft.type === "NS";
+                const effectiveRoutingPolicy = isNs ? "SIMPLE" : draft.routingPolicy;
+                const fieldErrors = draftErrors[draft.key] ?? {};
 
-              <FormField label="Record type">
-                <Select
-                  selectedOption={{ value: type, label: RECORD_TYPE_DESCRIPTIONS[type] }}
-                  onChange={({ detail }) => setType(detail.selectedOption.value ?? "A")}
-                  options={RECORD_TYPE_ORDER.map((t) => ({ value: t, label: RECORD_TYPE_DESCRIPTIONS[t] }))}
-                />
-              </FormField>
-
-              <FormField label="Alias">
-                <Toggle checked={isAlias} onChange={({ detail }) => setIsAlias(detail.checked)}>
-                  {isAlias ? "Yes" : "No"}
-                </Toggle>
-              </FormField>
-
-              {isAlias ? (
-                <FormField label="Route traffic to">
-                  <ColumnLayout columns={2}>
-                    <Select
-                      selectedOption={
-                        ALIAS_TARGET_TYPES.find((o) => o.id === aliasTargetType)
-                          ? { value: aliasTargetType, label: ALIAS_TARGET_TYPES.find((o) => o.id === aliasTargetType)!.label }
-                          : null
-                      }
-                      onChange={({ detail }) => setAliasTargetType(detail.selectedOption.value ?? "")}
-                      options={ALIAS_TARGET_TYPES.map((o) => ({ value: o.id, label: o.label }))}
-                    />
-                    <Input
-                      value={aliasTargetValue}
-                      onChange={({ detail }) => setAliasTargetValue(detail.value)}
-                      placeholder="Target endpoint"
-                    />
-                  </ColumnLayout>
-                </FormField>
-              ) : (
-                <>
-                  <FormField
-                    label="Value/Route traffic to"
-                    description="Enter each value on a separate line."
-                    errorText={fieldErrors.values}
-                    constraintText={grammar?.placeholder ? `Example: ${grammar.placeholder}` : undefined}
+                return (
+                  <ExpandableSection
+                    key={draft.key}
+                    variant="container"
+                    defaultExpanded
+                    headerText={`Record ${index + 1}`}
+                    headerActions={
+                      <Button
+                        formAction="none"
+                        disabled={drafts.length === 1}
+                        onClick={() => setDrafts((prev) => prev.filter((d) => d.key !== draft.key))}
+                      >
+                        Delete
+                      </Button>
+                    }
                   >
-                    {type === "CNAME" ? (
-                      <Input
-                        value={valuesText}
-                        onChange={({ detail }) => setValuesText(detail.value)}
-                        placeholder={grammar?.placeholder}
-                      />
-                    ) : (
-                      <Textarea
-                        value={valuesText}
-                        onChange={({ detail }) => setValuesText(detail.value)}
-                        placeholder={grammar?.placeholder}
-                        rows={4}
-                      />
-                    )}
-                  </FormField>
+                    <ColumnLayout columns={2}>
+                      <SpaceBetween size="l">
+                        <FormField
+                          label="Record name"
+                          info={<Link variant="info" onFollow={pushDemoLimitationToast}>Info</Link>}
+                          constraintText="Keep blank to create a record for the root domain."
+                          errorText={fieldErrors.name}
+                        >
+                          <SpaceBetween direction="horizontal" size="xs">
+                            <Input
+                              value={draft.namePrefix}
+                              onChange={({ detail }) => updateDraft(index, { namePrefix: detail.value })}
+                              placeholder="subdomain"
+                            />
+                            <Box padding={{ top: "xs" }}>{zone.name}</Box>
+                          </SpaceBetween>
+                        </FormField>
 
-                  <FormField
-                    label="TTL (seconds)"
-                    description="The amount of time, in seconds, that you want DNS recursive resolvers to cache information about this record."
-                    errorText={fieldErrors.ttl}
-                  >
-                    <SpaceBetween direction="horizontal" size="xs">
-                      <Input value={ttl} onChange={({ detail }) => setTtl(detail.value)} type="number" />
-                      {TTL_PRESETS.map((preset) => (
-                        <Button key={preset.label} onClick={() => setTtl(String(preset.seconds))}>
-                          {preset.label}
-                        </Button>
-                      ))}
-                    </SpaceBetween>
-                  </FormField>
-                </>
-              )}
+                        <FormField label="Alias">
+                          <Toggle
+                            checked={draft.isAlias}
+                            onChange={({ detail }) => updateDraft(index, { isAlias: detail.checked })}
+                          >
+                            {draft.isAlias ? "Yes" : "No"}
+                          </Toggle>
+                        </FormField>
 
-              <FormField label="Routing policy">
-                <Select
-                  disabled={isNs}
-                  selectedOption={
-                    ROUTING_POLICIES.find((p) => p.value === effectiveRoutingPolicy) ?? ROUTING_POLICIES[0]
-                  }
-                  onChange={({ detail }) => setRoutingPolicy(detail.selectedOption.value ?? "SIMPLE")}
-                  options={ROUTING_POLICIES}
-                />
-                {isNs && (
-                  <Box fontSize="body-s" color="text-body-secondary">
-                    You can specify an NS record with only simple routing policy.
-                  </Box>
-                )}
-              </FormField>
+                        {draft.isAlias ? (
+                          <FormField label="Route traffic to">
+                            <ColumnLayout columns={2}>
+                              <Select
+                                selectedOption={
+                                  ALIAS_TARGET_TYPES.find((o) => o.id === draft.aliasTargetType)
+                                    ? {
+                                        value: draft.aliasTargetType,
+                                        label: ALIAS_TARGET_TYPES.find((o) => o.id === draft.aliasTargetType)!.label,
+                                      }
+                                    : null
+                                }
+                                onChange={({ detail }) => updateDraft(index, { aliasTargetType: detail.selectedOption.value ?? "" })}
+                                options={ALIAS_TARGET_TYPES.map((o) => ({ value: o.id, label: o.label }))}
+                              />
+                              <Input
+                                value={draft.aliasTargetValue}
+                                onChange={({ detail }) => updateDraft(index, { aliasTargetValue: detail.value })}
+                                placeholder="Target endpoint"
+                              />
+                            </ColumnLayout>
+                          </FormField>
+                        ) : (
+                          <FormField
+                            label="Value"
+                            info={<Link variant="info" onFollow={pushDemoLimitationToast}>Info</Link>}
+                            description="Enter multiple values on separate lines."
+                            errorText={fieldErrors.values}
+                          >
+                            {draft.type === "CNAME" ? (
+                              <Input
+                                value={draft.valuesText}
+                                onChange={({ detail }) => updateDraft(index, { valuesText: detail.value })}
+                                placeholder={grammar?.placeholder}
+                              />
+                            ) : (
+                              <Textarea
+                                value={draft.valuesText}
+                                onChange={({ detail }) => updateDraft(index, { valuesText: detail.value })}
+                                placeholder={grammar?.placeholder}
+                                rows={4}
+                              />
+                            )}
+                          </FormField>
+                        )}
+                      </SpaceBetween>
 
-              {effectiveRoutingPolicy !== "SIMPLE" && (
-                <FormField label="Set identifier" description="Differentiates this record set from others sharing the same name and type.">
-                  <ColumnLayout columns={2}>
-                    <Input value={setIdentifier} onChange={({ detail }) => setSetIdentifier(detail.value)} />
-                    <Input
-                      value={routingConfigValue}
-                      onChange={({ detail }) => setRoutingConfigValue(detail.value)}
-                      placeholder="Routing value (stored and displayed, never evaluated)"
-                    />
-                  </ColumnLayout>
-                </FormField>
-              )}
+                      <SpaceBetween size="l">
+                        <FormField label="Record type" info={<Link variant="info" onFollow={pushDemoLimitationToast}>Info</Link>}>
+                          <Select
+                            selectedOption={{ value: draft.type, label: RECORD_TYPE_DESCRIPTIONS[draft.type] }}
+                            onChange={({ detail }) => updateDraft(index, { type: detail.selectedOption.value ?? "A" })}
+                            options={RECORD_TYPE_ORDER.map((t) => ({ value: t, label: RECORD_TYPE_DESCRIPTIONS[t] }))}
+                          />
+                        </FormField>
+
+                        {!draft.isAlias && (
+                          <FormField
+                            label="TTL (seconds)"
+                            info={<Link variant="info" onFollow={pushDemoLimitationToast}>Info</Link>}
+                            constraintText="Recommended values: 60 to 172800 (two days)"
+                            errorText={fieldErrors.ttl}
+                          >
+                            <SpaceBetween direction="horizontal" size="xs">
+                              <Input
+                                value={draft.ttl}
+                                onChange={({ detail }) => updateDraft(index, { ttl: detail.value })}
+                                type="number"
+                              />
+                              {TTL_PRESETS.map((preset) => (
+                                <Button
+                                  key={preset.label}
+                                  formAction="none"
+                                  onClick={() => updateDraft(index, { ttl: String(preset.seconds) })}
+                                >
+                                  {preset.label}
+                                </Button>
+                              ))}
+                            </SpaceBetween>
+                          </FormField>
+                        )}
+
+                        <FormField label="Routing policy" info={<Link variant="info" onFollow={pushDemoLimitationToast}>Info</Link>}>
+                          <Select
+                            disabled={isNs}
+                            selectedOption={
+                              ROUTING_POLICIES.find((p) => p.value === effectiveRoutingPolicy) ?? ROUTING_POLICIES[0]
+                            }
+                            onChange={({ detail }) => updateDraft(index, { routingPolicy: detail.selectedOption.value ?? "SIMPLE" })}
+                            options={ROUTING_POLICIES}
+                          />
+                          {isNs && (
+                            <Box fontSize="body-s" color="text-body-secondary">
+                              You can specify an NS record with only simple routing policy.
+                            </Box>
+                          )}
+                        </FormField>
+
+                        {effectiveRoutingPolicy !== "SIMPLE" && (
+                          <FormField
+                            label="Set identifier"
+                            description="Differentiates this record set from others sharing the same name and type."
+                          >
+                            <ColumnLayout columns={2}>
+                              <Input
+                                value={draft.setIdentifier}
+                                onChange={({ detail }) => updateDraft(index, { setIdentifier: detail.value })}
+                              />
+                              <Input
+                                value={draft.routingConfigValue}
+                                onChange={({ detail }) => updateDraft(index, { routingConfigValue: detail.value })}
+                                placeholder="Routing value (stored and displayed, never evaluated)"
+                              />
+                            </ColumnLayout>
+                          </FormField>
+                        )}
+                      </SpaceBetween>
+                    </ColumnLayout>
+                  </ExpandableSection>
+                );
+              })}
+
+              <Box float="right">
+                <Button formAction="none" onClick={() => setDrafts((prev) => [...prev, makeDraft()])}>
+                  Add another record
+                </Button>
+              </Box>
             </SpaceBetween>
           </Container>
         </Form>

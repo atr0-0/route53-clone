@@ -1,14 +1,17 @@
-// Verified console copy (07-ui-spec.md §7) — exact type-option descriptions.
+// Only A's wording is screenshot-verified (docs/reference/05-create-record-form.png:
+// "A – Routes traffic to an IPv4 address and some AWS resources"). The rest follow
+// the same "Routes traffic to..."/"Contains/Specifies..." phrasing from the AWS
+// Route53 developer guide but aren't directly captured — best-effort, not [VERIFIED].
 export const RECORD_TYPE_DESCRIPTIONS: Record<string, string> = {
-  A: "A — IPv4 address",
-  AAAA: "AAAA — IPv6 address",
-  CAA: "CAA — Certificate Authority Authorization",
-  CNAME: "CNAME — Canonical name",
-  MX: "MX — Mail exchange",
-  NS: "NS — Name server",
-  PTR: "PTR — Pointer",
-  SRV: "SRV — Service locator",
-  TXT: "TXT — Text",
+  A: "A – Routes traffic to an IPv4 address and some AWS resources", // [VERIFIED]
+  AAAA: "AAAA – Routes traffic to an IPv6 address and some AWS resources",
+  CAA: "CAA – Restricts the certificate authorities allowed to issue certificates for the domain",
+  CNAME: "CNAME – Routes traffic to another domain name",
+  MX: "MX – Specifies mail servers for the domain and a priority for each",
+  NS: "NS – Contains the name servers for the hosted zone",
+  PTR: "PTR – Maps an IP address to a domain name, for reverse DNS lookups",
+  SRV: "SRV – Specifies the hostname and port for servers that provide a service",
+  TXT: "TXT – Contains text information, often used for domain ownership verification",
 };
 
 export const RECORD_TYPE_ORDER = ["A", "AAAA", "CNAME", "MX", "NS", "PTR", "SRV", "TXT", "CAA"];
@@ -24,9 +27,9 @@ export const ALIAS_TARGET_TYPES = [
   { id: "api-gateway", label: "API Gateway" },
 ];
 
+// docs/reference/05-create-record-form.png shows exactly 1m/1h/1d — no 5m preset.
 export const TTL_PRESETS = [
   { label: "1m", seconds: 60 },
-  { label: "5m", seconds: 300 },
   { label: "1h", seconds: 3600 },
   { label: "1d", seconds: 86400 },
 ];
