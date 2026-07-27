@@ -70,6 +70,21 @@ export function useCreateHostedZone() {
   });
 }
 
+export function useDeleteHostedZone(zoneId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (options: { cascade: boolean }) => {
+      const { error } = await apiClient.DELETE("/v1/hosted-zones/{zone_id}", {
+        params: { path: { zone_id: zoneId }, query: { cascade: options.cascade } },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [HOSTED_ZONES_KEY, "list"] });
+    },
+  });
+}
+
 export function useUpdateHostedZone(zoneId: string) {
   const queryClient = useQueryClient();
   return useMutation({

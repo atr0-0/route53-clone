@@ -64,6 +64,16 @@ def record_count(session: Session, hosted_zone_id: int) -> int:
     )
 
 
+def count_non_required_records(session: Session, hosted_zone_id: int) -> int:
+    """FR-B18: a zone "holds nothing beyond its required SOA and NS sets" means
+    this is zero — the exact condition (non-)cascade delete checks."""
+    return session.scalar(
+        select(func.count())
+        .select_from(RecordSet)
+        .where(RecordSet.hosted_zone_id == hosted_zone_id, RecordSet.is_required.is_(False))
+    )
+
+
 def list_zones(
     session: Session,
     *,

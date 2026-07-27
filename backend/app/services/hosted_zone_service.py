@@ -11,7 +11,12 @@ import re
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.errors import ConflictingDomainExistsError, InvalidInputError, NoSuchHostedZoneError
+from app.core.errors import (
+    ConflictingDomainExistsError,
+    HostedZoneNotEmptyError,
+    InvalidInputError,
+    NoSuchHostedZoneError,
+)
 from app.models.hosted_zone import HostedZone
 from app.repositories import hosted_zone_repo, record_set_repo
 from app.services import generators
@@ -160,3 +165,16 @@ def update_zone(
     session.commit()
     session.refresh(zone)
     return zone
+
+
+def delete_zone(session: Session, zone_id: str, *, cascade: bool) -> None:
+    """FR-B18/FR-B18a/FR-B19. Without `cascade`, a zone holding anything beyond
+    its required SOA + apex NS refuses deletion with the verbatim AWS message.
+    `cascade` deletes everything atomically by deleting only the zone row and
+    relying on the database's ON DELETE CASCADE (the same PRAGMA-backed path
+    Slice 1's invariant-3 test proves) — never an ORM-simulated cascade."""
+    zone = get_zone(session, zone_id)
+    if not cascade and hosted_zone_repo.count_non_required_records(session, zone.id) > 0:
+        raise HostedZoneNotEmptyError()
+    session.delete(zone)
+    session.commit()

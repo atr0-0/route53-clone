@@ -13,6 +13,7 @@ import { Suspense, useState } from "react";
 import { ConsoleTable } from "@/components/table/ConsoleTable";
 import { useTableState } from "@/components/table/useTableState";
 import { useHostedZones, type HostedZoneListItem } from "@/features/hosted-zones/queries";
+import { ZoneDeleteModal } from "@/features/hosted-zones/components/ZoneDeleteModal";
 import { useSetBreadcrumbs } from "@/components/shell/BreadcrumbsContext";
 
 const TYPE_OPTIONS = [
@@ -36,6 +37,7 @@ function HostedZonesPageContent() {
   const router = useRouter();
   const table = useTableState({ defaultSort: "name", defaultPageSize: 10 });
   const [selected, setSelected] = useState<HostedZoneListItem[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<HostedZoneListItem | null>(null);
 
   const { data, isLoading } = useHostedZones({
     search: table.search,
@@ -64,6 +66,16 @@ function HostedZonesPageContent() {
 
   return (
     <ContentLayout header={<Header variant="h1">Route 53</Header>}>
+      {deleteTarget && (
+        <ZoneDeleteModal
+          zone={deleteTarget}
+          onDismiss={() => setDeleteTarget(null)}
+          onDeleted={() => {
+            setDeleteTarget(null);
+            setSelected([]);
+          }}
+        />
+      )}
       <ConsoleTable
         title="Hosted zones"
         columnDefinitions={columnDefinitions}
@@ -103,10 +115,9 @@ function HostedZonesPageContent() {
             >
               Edit
             </Button>
-            {/* Delete lands in Slice 5 — its non-empty-zone guard needs records to
-                test against, so the button renders (matching the console layout)
-                but stays disabled rather than being wired to a no-op. */}
-            <Button disabled>Delete</Button>
+            <Button disabled={selected.length !== 1} onClick={() => setDeleteTarget(selected[0])}>
+              Delete
+            </Button>
             <Button variant="primary" onClick={() => router.push("/hosted-zones/create")}>
               Create hosted zone
             </Button>

@@ -114,3 +114,15 @@ def update_hosted_zone(
         tags=[tag.model_dump() for tag in body.tags] if body.tags is not None else None,
     )
     return _to_detail(zone, hosted_zone_repo.record_count(db, zone.id))
+
+
+@router.delete("/{zone_id}", status_code=204)
+def delete_hosted_zone(
+    zone_id: str,
+    cascade: bool = False,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+) -> None:
+    """FR-B18/FR-B18a: 409 HostedZoneNotEmpty unless `cascade=true`, in which
+    case every record set, value, and tag is deleted atomically with the zone."""
+    hosted_zone_service.delete_zone(db, zone_id, cascade=cascade)

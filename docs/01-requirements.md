@@ -640,8 +640,11 @@ differs from page 1.
 `HostedZoneNotEmpty` message and the zone survives.
 
 **AC-4a (AS-H6, FR-B18a)** — Given that same modal, when the user chooses *"Delete all 1 records, then
-delete this zone"* and types the zone name, then both the record and the zone are gone; and when the
-typed name doesn't match, then the confirm button stays disabled.
+delete this zone"* and types **`confirm`**, then both the record and the zone are gone; and when the
+typed text doesn't match, then the confirm button stays disabled. **Corrected 2026-07-27**: an
+earlier draft had the user typing the zone name, contradicting FR-B17's verified `confirm`-word
+pattern (the S3/RDS resource-name pattern is exactly what that decision rejected) — this now
+matches FR-B17/FR-B18a and `07-ui-spec.md` §5.6/§7.
 
 **AC-5 (AS-H5)** — Given an existing zone, when Edit is opened, then domain name and type are read-only
 **with explanatory helper text**, and only description and tags can change.
