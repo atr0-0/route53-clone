@@ -121,14 +121,19 @@ export function ConsoleTable<T>({
         </Header>
       }
       filter={
-        <SpaceBetween direction="horizontal" size="s">
-          <TextFilter
-            filteringText={filteringText}
-            onChange={({ detail }) => onFilteringTextChange(detail.filteringText)}
-            onDelayedChange={({ detail }) => onDelayedFilteringTextChange(detail.filteringText)}
-            filteringPlaceholder={filteringPlaceholder}
-          />
-          {filterExtras}
+        <SpaceBetween size="xs">
+          <Box fontSize="body-s" color="text-body-secondary">
+            Automatic mode is the current search behavior optimized for best filter results.
+          </Box>
+          <SpaceBetween direction="horizontal" size="s">
+            <TextFilter
+              filteringText={filteringText}
+              onChange={({ detail }) => onFilteringTextChange(detail.filteringText)}
+              onDelayedChange={({ detail }) => onDelayedFilteringTextChange(detail.filteringText)}
+              filteringPlaceholder={filteringPlaceholder}
+            />
+            {filterExtras}
+          </SpaceBetween>
         </SpaceBetween>
       }
       pagination={

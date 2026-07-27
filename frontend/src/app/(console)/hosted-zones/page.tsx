@@ -128,9 +128,9 @@ function HostedZonesPageContent() {
           <SpaceBetween direction="horizontal" size="xs">
             <Button
               disabled={selected.length !== 1}
-              onClick={() => router.push(`/hosted-zones/${selected[0].zoneId}/edit`)}
+              onClick={() => router.push(`/hosted-zones/${selected[0].zoneId}`)}
             >
-              Edit
+              View details
             </Button>
             <Button disabled={selected.length !== 1} onClick={() => setDeleteTarget(selected[0])}>
               Delete
