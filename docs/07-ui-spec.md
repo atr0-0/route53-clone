@@ -80,41 +80,54 @@ Every authenticated screen renders inside one `AppLayout` (`FR-E1`), defined onc
 ## 3. Navigation
 
 Reproduces Route53's real tree including sections the brief never names (`[DERIVED]`, same logic as
-A2). Everything except **Hosted zones** routes to the Coming Soon page — one component, N routes.
+A2). `[VERIFIED]` against direct capture (`01-nav.png`) —
+[DD-21](./02-design-decisions.md#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it).
+Everything except **Hosted zones** either routes to the Coming Soon page or, for two leaves added
+purely for tree completeness, shows the shared demo-limitation toast
+([DD-22](./02-design-decisions.md#dd-22--mocked-actions-get-a-shared-demo-limitation-toast-rather-than-more-coming-soon-routes)).
 A short nav is one of the most obvious tells that a console clone isn't the real thing.
 
 ```
 Dashboard
+Hosted zones             ← the only working branch
+Health checks
+Profiles
 ─────────────────────
-▾ Domains
-    Registered domains
-    Requests
+▾ Global Resolver
+    Global resolvers  [New]      ← toast-only
 ─────────────────────
-▾ Hosted zones
-    Hosted zones            ← the only working branch
-    Health checks
-─────────────────────
-▾ Traffic flow
-    Traffic policies
-    Policy records
-─────────────────────
-▾ Resolver
+▾ VPC Resolver
     VPCs
     Inbound endpoints
     Outbound endpoints
     Rules
     Query logging
+    Outposts                     ← toast-only
+─────────────────────
+▾ Domains
+    Registered domains
+    Requests
 ─────────────────────
 ▾ IP-based routing
     CIDR collections
 ─────────────────────
+▾ Traffic flow
+    Traffic policies
+    Policy records
+─────────────────────
   Applications
-  Profiles
   Test record
 ```
 
 Built from a `SideNavigation` `items` array using `type: "section"` for groups and `type: "divider"`
 between them — the console's exact structure.
+
+**Corrected 2026-07-27**: an earlier draft (written before direct capture existed) had Dashboard as
+the lone flat item with everything else — including Profiles — nested under sectioned groups, and
+Resolver as one undivided section. The capture showed: Dashboard, Hosted zones, Health checks, and
+Profiles are all flat top-level items; Resolver splits into **Global Resolver** and **VPC Resolver**;
+and Domains sits after VPC Resolver, not first. `Global resolvers` carries a `New` badge, matching
+the capture.
 
 ---
 
@@ -122,12 +135,11 @@ between them — the console's exact structure.
 
 | Route | Screen | Key components | Requirement |
 |---|---|---|---|
-| `/login` | Sign in | Centred `Container`, `Form` | `FR-A1` |
-| `/dashboard` | **Dashboard (landing)** | `ColumnLayout` stat containers, recent-zones `Table` | `FR-F2` |
+| `/login` | Sign in | The same `TopNavigation` the authenticated shell uses, plus a centred `Container` | `FR-A1` |
+| `/dashboard` | **Dashboard (landing)** | Four-card feature grid, Register-domain search, Notifications `Table` | `FR-F2` |
 | `/hosted-zones` | Zone list | `Table` + `TextFilter` + `Pagination` + `CollectionPreferences` | `FR-B1` – `FR-B9` |
 | `/hosted-zones/create` | Create zone | Full-page `Form` | `FR-B10` |
-| `/hosted-zones/[id]` | Zone detail → **Records** tab | `Tabs`, records `Table` | `FR-C3` – `FR-C8` |
-| `/hosted-zones/[id]/details` | **Hosted zone details** tab | `ColumnLayout` key-value pairs, `CopyToClipboard` | `FR-B23` |
+| `/hosted-zones/[id]` | Zone detail → **Records** tab | `ExpandableSection` summary, `Tabs`, records `Table`, split panel | `FR-B21`, `FR-C3` – `FR-C8` |
 | `/hosted-zones/[id]/edit` | Edit zone | Full-page `Form`, read-only fields | `FR-B15` |
 | `/hosted-zones/[id]/records/create` | Quick create record | Full-page `Form` | `FR-C9` |
 | `/hosted-zones/[id]/records/[rid]/edit` | Edit record | Full-page `Form` | `FR-C14` |
@@ -142,33 +154,52 @@ delete (type-to-confirm) · import preview · keyboard shortcut reference.
 
 ### 5.1 Dashboard — the landing page
 
-The console lands here after sign-in, so this is a reviewer's first impression. Built with real
-data rather than a placeholder (`FR-F2`, raised to **P1**).
+The console lands here after sign-in, so this is a reviewer's first impression. `[VERIFIED]` against
+direct capture (`08-dashboard.png`) —
+[DD-21](./02-design-decisions.md#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it).
 
 ```
-Route 53 › Dashboard
+Route 53 › Dashboard                                          Info
 
-┌─ Hosted zones ──┐ ┌─ Records ───────┐ ┌─ Health checks ─┐
-│       15        │ │       92        │ │       0         │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
+┌─ DNS management ──┐ ┌─ Availability   ─┐ ┌─ Traffic        ─┐ ┌─ Domain         ─┐
+│ 15 hosted zones,  │ │ monitoring       │ │ management       │ │ registration     │
+│ 92 records        │ │                  │ │                  │ │                  │
+│ [Create hosted    │ │ [Create health   │ │ [Create policy]  │ │ [Register domain]│
+│  zone]            │ │  check]          │ │                  │ │                  │
+└───────────────────┘ └──────────────────┘ └──────────────────┘ └──────────────────┘
 
-┌─ Recently created hosted zones ──────────── [View all] ─┐
-│  Hosted zone name    Type     Records   Created         │
-│  example.com         Public   28        Jul 27, 2026    │
-│  acme-corp.net       Public   9         Jul 26, 2026    │
-│  staging.internal    Private  4         Jul 25, 2026    │
+┌─ Register domain ────────────────────────────────────────┐
+│ [ example.com                    ] [Check]                │
+│ Not the domain you're looking for? Transfer your          │
+│ existing domains.                                          │
 └─────────────────────────────────────────────────────────┘
 
-[Create hosted zone]
+┌─ Notifications ─────────────────────────────── [↻] ──────┐
+│ Resource            Status            Last update         │
+│               (empty — no notifications)                  │
+└─────────────────────────────────────────────────────────┘
 ```
+
+Only **DNS management → `Create hosted zone`** is a real action. The other three cards, the
+Register-domain search/transfer link, and the Notifications refresh button show the shared
+demo-limitation toast rather than doing nothing silently
+([DD-22](./02-design-decisions.md#dd-22--mocked-actions-get-a-shared-demo-limitation-toast-rather-than-more-coming-soon-routes)).
+Genuine zone/record counts render as secondary text inside the DNS management card rather than as a
+separate stat-tile row the real product doesn't have.
+
+**Corrected 2026-07-27**: an earlier draft (written before direct capture existed) specified
+`ColumnLayout` stat containers and a "recently created hosted zones" table — direct capture showed
+the real Dashboard has neither. See [DD-21](./02-design-decisions.md#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it).
 
 ### 5.2 Hosted zones list
 
 ```
 Route 53 › Hosted zones
 
-Hosted zones (15)          [Delete] [Edit] [Create hosted zone]
+Hosted zones (15)     [Delete] [View details] [Create hosted zone]
 ┌─────────────────────────────────────────────── ⚙ ─────────┐
+│ Automatic mode is the current search behavior optimized    │
+│ for best filter results.                                    │
 │ [🔍 Find hosted zones            ]      ‹ 1 2 ›           │
 ├───┬──────────────┬────────┬──────────┬─────────┬──────────┤
 │ ○ │ Hosted zone… │ Type   │ Created… │ Record… │ Descrip… │
@@ -178,29 +209,42 @@ Hosted zones (15)          [Delete] [Edit] [Create hosted zone]
 └───┴──────────────┴────────┴──────────┴─────────┴──────────┘
 ```
 
-Columns per `FR-B1`; `Hosted zone ID` also present, monospace with `CopyToClipboard`. `Edit` and
-`Delete` disabled until a row is selected (`FR-B2`). Search is server-side over name and description
-(`FR-B3`).
+Columns per `FR-B1`; `Hosted zone ID` also present, monospace with `CopyToClipboard`. `View details`
+and `Delete` disabled until a row is selected (`FR-B2`) — `View details` routes to the zone detail
+page; editing lives there (`FR-B21`). Search is server-side over name and description (`FR-B3`).
+**Corrected 2026-07-27**: an earlier draft had this button labelled `Edit`; direct capture
+(`02-zones-list.png`) showed `View details`.
 
 ### 5.3 Zone detail — Records tab
+
+`[VERIFIED]` against direct capture (`04-records-table.png`) —
+[DD-21](./02-design-decisions.md#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it).
 
 ```
 Route 53 › Hosted zones › example.com
 
-example.com                      [Actions ▾] [Edit] [Delete]
+[Public] example.com    [Export zone file] [Delete zone] [Test record] [Configure query logging]
 
-Hosted zone ID  Z1D633PJN98FT9    Type      Public
-Record count    28                Created   Jul 27, 2026
+▾ Hosted zone details ────────────────────────────────────────────────
+  Hosted zone name  example.com        Record count  28    Created  Jul 27, 2026
+  Description       Primary production zone           Created by  Admin User
+  Hosted zone ID  ⧉ Z1D633PJN98FT9
+  Name servers
+  ⧉ ns-2048.awsdns-64.com   ⧉ ns-2049.awsdns-65.net
+  ⧉ ns-2050.awsdns-66.org   ⧉ ns-2051.awsdns-67.co.uk
+  Edit
+─────────────────────────────────────────────────────────────────────
 
-┌ Records │ Hosted zone details │ Query logging │ DNSSEC signing ┐
+┌ Records │ Accelerated recovery │ DNSSEC signing │ Tags ┐
 
-Records (28)         [Import zone file] [Delete] [Edit] [Create record]
+Records (28)                                    [Edit] [Delete] [Create record]
 ┌─────────────────────────────────────────────── ⚙ ─────────┐
-│ [🔍 Filter records by property or value] [Type ▾] ‹ 1 2 3 ›│
-├───┬────────────────┬──────┬──────────┬───────┬─────────────┤
-│ ○ │ Record name    │ Type │ Routing… │ Alias │ Value/Route…│
-├───┼────────────────┼──────┼──────────┼───────┼─────────────┤
-│ ○ │ example.com    │ NS   │ Simple   │ No    │ ns-2048.aw… │
+│ [🔍 Filter records by property or value]                   │
+│ [Type ▾] [Routing policy ▾] [Alias ▾]      ‹ 1 2 3 ›      │
+├───┬────────────────┬──────┬──────────┬───────┬─────────────┤       ┌─ 0 records selected ──┐
+│ ○ │ Record name    │ Type │ Routing… │ Alias │ Value/Route…│       │ Select a record to see│
+├───┼────────────────┼──────┼──────────┼───────┼─────────────┤       │ its details.          │
+│ ○ │ example.com    │ NS   │ Simple   │ No    │ ns-2048.aw… │       └───────────────────────┘
 │   │                │      │          │       │ ns-2049.aw… │
 │   │                │      │          │       │ +2 more     │
 │ ○ │ www.example.com│ A    │ Simple   │ No    │ 192.0.2.1   │
@@ -213,61 +257,93 @@ Records (28)         [Import zone file] [Delete] [Edit] [Create record]
 Truncates past three with `+N more` (`FR-C7`). Required records (SOA, apex NS) render with delete
 disabled and an explanatory tooltip (`FR-C8`).
 
-Two composition points from the `details-tabs` demo (§10), both corrections to an earlier draft:
+Composition, corrected 2026-07-27 against direct capture (an earlier draft, written before captures
+existed, got all four of these wrong):
 
-- **A key-value summary block sits *above* the tab strip**, not inside a tab. The console shows core
-  identifying facts immediately; the tabs hold the detail. Our earlier layout put everything inside
-  tabs.
-- **Secondary actions collapse into an `Actions` `ButtonDropdown`**, with only `Edit` and `Delete`
-  as standalone buttons. `Test record`, `Import zone file`, and `Export zone file` belong in that
-  dropdown rather than sitting loose in the header.
+- **"Hosted zone details" is an `ExpandableSection`** (`variant="container"`, default-expanded)
+  *above* the tab strip, not a tab — the console shows core identifying facts immediately, with an
+  inline **`Edit`** link at the bottom routing to `FR-B15`'s edit page. There is no standalone header
+  `Edit` button.
+- **Header actions are four flat buttons** — `Export zone file`, `Delete zone`, `Test record`,
+  `Configure query logging` — no `Actions` dropdown. `Test record` and `Configure query logging` show
+  the demo-limitation toast ([DD-22](./02-design-decisions.md#dd-22--mocked-actions-get-a-shared-demo-limitation-toast-rather-than-more-coming-soon-routes));
+  `Export zone file` and `Delete zone` are real.
+- **The tab set is `Records`, `Accelerated recovery`, `DNSSEC signing`, `Tags`** — not "Hosted zone
+  details" / "Query logging". `Accelerated recovery` shows the demo-limitation toast on selection
+  instead of switching tab content. `Tags` is real — the zone's actual tags, read-only.
+- **A split panel** (`FR-C3a`) shows "N records selected" / the selected record's full detail —
+  matching the capture, threaded up to the shell via `SplitPanelContext`
+  ([DD-24](./02-design-decisions.md#dd-24--record-detail-split-panel-threaded-via-react-context)).
 
 `Tabs` carries `ariaLabel="Resource details"` (`NFR-9`).
 
 ### 5.4 Quick create record
 
+`[VERIFIED]` against direct capture (`05-create-record-form.png`) —
+[DD-21](./02-design-decisions.md#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it).
+
 ```
 Route 53 › Hosted zones › example.com › Create record
 
+Create record                                              Info
+
 Quick create record                        [Switch to wizard]
 
-Record name
-[ www                    ] .example.com
-Keep blank to create a record for the root domain.
+▾ Record 1                                          [Delete]
 
-Record type
-[ A — IPv4 address                              ▾ ]
+Record name                    Record type
+[ subdomain              ] example.com   [ A – Routes traffic to an
+Keep blank to create a                    IPv4 address and some AWS
+record for the root domain.               resources               ▾ ]
 
 Alias  ( ○ )
 
-Value/Route traffic to
+Value
 ┌──────────────────────────────────────────────────┐
 │ 192.0.2.1                                        │
 │ 192.0.2.2                                        │
 └──────────────────────────────────────────────────┘
 Enter multiple values on separate lines.
 
-TTL (seconds)          Routing policy
-[ 300 ]                [ Simple routing            ▾ ]
-[1m] [5m] [1h] [1d]
+TTL (seconds)                  Routing policy
+[ 300 ] [1m] [1h] [1d]          [ Simple routing            ▾ ]
+Recommended values: 60 to 172800 (two days)
+
+                                          [Add another record]
 
                                 [Cancel] [Create records]
 ```
 
 Details that matter:
 
-- **Record name is a split input** — editable prefix, static `.example.com` suffix (`FR-C2`).
-  Blank means the apex, and the hint says so, because the console explicitly warns against typing
-  `@` `[VERIFIED]`.
-- **Type options carry their descriptions** — `A — IPv4 address`, not `A` `[VERIFIED]`.
-- **`Alias` on** hides Value and TTL, shows the mocked target picker (`FR-C12`).
+- **Record name shows the zone name as plain text beside the input**, not a second disabled input
+  (`FR-C2`). Blank means the apex, and the hint says so, because the console explicitly warns against
+  typing `@` `[VERIFIED]`.
+- **Type options carry their descriptions.** Only **A**'s wording is `[VERIFIED]` —
+  `A – Routes traffic to an IPv4 address and some AWS resources` — the developer guide's shorter
+  `A — IPv4 address` does **not** match the live dropdown. The remaining eight follow the same
+  phrasing pattern but are best-effort.
+- **`Alias` on** hides Value and TTL, shows the mocked target picker (`FR-C12`), and the Value label
+  becomes `Route traffic to`.
 - **CNAME** collapses the textarea to a single input — the console permits multiple values for
   every type except CNAME `[VERIFIED]`.
 - **NS forces Routing policy to Simple routing** and disables the select — *"You can specify an NS
   record with only simple routing policy"* `[VERIFIED]`.
+- **TTL quick-set is `1m` / `1h` / `1d`** `[VERIFIED]` — no `5m`.
+- **`Add another record` genuinely adds a second, independent, deletable `Record N` section**
+  (`FR-C9a`) — not cosmetic. `Create records` submits every draft sequentially.
+  [DD-23](./02-design-decisions.md#dd-23--multi-record-quick-create-built-for-real)
+- **`Switch to wizard`** shows the demo-limitation toast — the wizard flow itself is deferred
+  (`FR-C10`).
 - **Inline validation renders from `/record-types`** (`FR-D6`) — placeholder, help text, and pattern
   all come from the API, so no grammar is duplicated in TypeScript.
 - The submit button is **`Create records`**, plural `[VERIFIED]`.
+
+**Corrected 2026-07-27**: an earlier draft (written before direct capture existed) had the zone-name
+suffix as a second disabled input, the Value field labelled `Value/Route traffic to` always, a `5m`
+TTL preset, and no multi-record mechanism — direct capture showed the first three wrong and revealed
+the fourth as real console behaviour worth building
+([DD-23](./02-design-decisions.md#dd-23--multi-record-quick-create-built-for-real)).
 
 ### 5.5 Edit hosted zone
 
@@ -443,30 +519,47 @@ and page size to query params.
 `[VERIFIED]` strings are confirmed against AWS documentation (sources in
 [SRS §15](./01-requirements.md)). Others are best-effort per **A4**.
 
-### Record type options `[VERIFIED]`
+### Record type options
+
+Only **A** is `[VERIFIED]` against direct capture (`05-create-record-form.png`); the other eight
+follow the same "Routes traffic to…" / "Contains/Specifies…" phrasing but are best-effort, not
+directly captured:
 
 ```
-A — IPv4 address                            NS — Name server
-AAAA — IPv6 address                         PTR — Pointer
-CAA — Certificate Authority Authorization   SRV — Service locator
-CNAME — Canonical name                      TXT — Text
-MX — Mail exchange
+A — Routes traffic to an IPv4 address and some AWS resources  [VERIFIED]
+AAAA — Routes traffic to an IPv6 address and some AWS resources
+CAA — Restricts the certificate authorities allowed to issue certificates for the domain
+CNAME — Routes traffic to another domain name
+MX — Specifies mail servers for the domain and a priority for each
+NS — Contains the name servers for the hosted zone
+PTR — Maps an IP address to a domain name, for reverse DNS lookups
+SRV — Specifies the hostname and port for servers that provide a service
+TXT — Contains text information, often used for domain ownership verification
 ```
+
+**Corrected 2026-07-27**: an earlier draft had all nine in the short form `A — IPv4 address` sourced
+from developer-guide prose — direct capture showed the live dropdown uses the longer form for A, and
+the short form was never actually the console's string.
 
 ### Labels and buttons
 
 | Context | String | Status |
 |---|---|---|
-| Record form | `Record name`, `Record type`, `Alias`, `Value/Route traffic to`, `TTL (seconds)`, `Routing policy` | `[VERIFIED]` |
+| Record form | `Record name`, `Record type`, `Alias`, `TTL (seconds)`, `Routing policy` | `[VERIFIED]` |
+| Record form | `Value` (plain, non-alias) / `Route traffic to` (alias on) | `[VERIFIED]` — corrected from the earlier combined `Value/Route traffic to` |
 | Record form | `Quick create record` / `Switch to wizard` | `[VERIFIED]` |
 | Record form submit | **`Create records`** (plural) | `[VERIFIED]` |
+| Record form | TTL quick-set `1m` / `1h` / `1d` (no `5m`) | `[VERIFIED]` |
 | Routing option | **`Simple routing`** (not "Simple") | `[VERIFIED]` |
 | Zone form | `Domain name`, `Description - optional`, `Type` | `[UNVERIFIED]` — docs call it "comment"; current console uses Description |
 | Zone type | `Public hosted zone` / `Private hosted zone` | `[VERIFIED]` |
-| Zone actions | `Create hosted zone`, `Edit`, `Delete`, `View details` | `[VERIFIED]` |
+| Zone actions | `Create hosted zone`, `View details`, `Delete` | `[VERIFIED]` — corrected from `Edit` |
+| Zone detail actions | `Export zone file`, `Delete zone`, `Test record`, `Configure query logging` | `[VERIFIED]` — corrected from an `Actions` dropdown plus standalone `Edit`/`Delete` |
+| Zone detail tabs | `Records`, `Accelerated recovery`, `DNSSEC signing`, `Tags` | `[VERIFIED]` — corrected from `Hosted zone details`/`Query logging` as tabs |
 | Zone search | `Find hosted zones` | `[UNVERIFIED]` |
 | Record search | `Filter records by property or value` | `[UNVERIFIED]` |
-| Zone columns | `Hosted zone name`, `Type`, `Created by`, `Record count`, `Description`, `Hosted zone ID` | `[UNVERIFIED]` |
+| Zone columns | `Hosted zone name`, `Type`, `Created by`, `Record count`, `Description`, `Hosted zone ID` | `[VERIFIED]` |
+| Record columns | `Record name`, `Type`, `Routing policy`, `Alias`, `Value/Route traffic to`, `TTL (seconds)` | `[VERIFIED]` |
 
 ### Help text `[VERIFIED]`
 
@@ -548,29 +641,35 @@ patterns. Read as *patterns*, never copied: screens stay hand-written Cloudscape
 | `server-side-table` (`root.tsx`, `hooks.ts`) | ✅ §6 items 1–5 — the entire table pattern |
 | `delete-with-additional-confirmation` | ✅ §5.6, §7 — the verified confirm-word pattern |
 | `form` (`form.tsx`, `unsaved-changes-modal.tsx`) | ✅ §6 — form composition, error summary, `focusTopMostError`, the unsaved-changes guard |
-| `details-tabs` | ✅ §5.3 — summary block above the tabs, `Actions` dropdown |
-| `form-unsaved-changes` | ⬜ page-level abandon copy — needed before **Slice 3** |
-| `dashboard` | ⬜ §5.1 stat containers — needed before **Slice 6** |
+| `details-tabs` | ⚠️ Partially superseded — its "summary block above the tabs" pattern held up, but its `Actions`-dropdown pattern turned out **not** to match the real Route53 zone-detail page specifically (direct capture showed four flat header buttons instead, §5.3) |
+| `form-unsaved-changes` | ⬜ page-level abandon copy — `FR-E12` remains unimplemented as of 2026-07-27 |
+| `dashboard` | ⬜ still unread — the real Dashboard layout came from direct capture (`08-dashboard.png`) instead, which arrived first |
 
 **2. AWS Route53 Developer Guide** — console procedure pages. Source of the §7 copy deck; full list
-in [SRS §15](./01-requirements.md).
+in [SRS §15](./01-requirements.md). **Caveat found 2026-07-27**: documentation prose and live UI
+strings are not guaranteed to match even where both exist — the guide's `A — IPv4 address` differs
+from the live dropdown's `A – Routes traffic to an IPv4 address and some AWS resources` (§7). Where
+both a documentation source and a direct capture exist for the same string, the capture wins.
 
-**3. Direct console capture** — a throwaway hosted zone, deleted within 12 hours (verified free).
-Pending. This is the **only** source for what remains `[UNVERIFIED]`: table column sets and their
-default visibility, left-nav ordering, TTL quick-set presets, date format, empty-state copy, and the
-zone description field label. Captures land in `docs/reference/`.
+**3. Direct console capture** — five screenshots taken 2026-07-27, landed in `docs/reference/`:
+`01-nav.png`, `02-zones-list.png`, `04-records-table.png`, `05-create-record-form.png`,
+`08-dashboard.png`. Completes the plan
+[DD-19](./02-design-decisions.md#dd-19--how-ui-fidelity-is-sourced) committed to; what it corrected
+is detailed in
+[DD-21](./02-design-decisions.md#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it)
+and reflected throughout §3, §5.1, §5.2, §5.3, §5.4, and §7 above.
 
-**Corrected 2026-07-27**: `08-implementation-plan.md` §6 refers to "the eight screens listed" here —
-that list never actually existed in this section. Named explicitly rather than left dangling:
+Of the eight screens originally planned (list below), **five were captured and used**; three were
+not (`#3`, `#6`, `#7`) and their target facts remain `[UNVERIFIED]`:
 
-1. Left nav, fully expanded (nav ordering)
-2. Hosted zones list, populated with a few zones (table columns, default visibility, empty-state copy if captured before creating any)
-3. Create hosted zone form (the description field's real label)
-4. Zone detail — Records tab, populated with a few record types (table columns, date format in the Created column)
-5. Quick create record form, with a type selected that shows a TTL field (TTL quick-set presets)
-6. Edit hosted zone form (cross-check against #3's description label)
-7. Hosted zones list or Records tab with zero non-required rows (empty-state copy, distinct from the no-match state)
-8. Dashboard (real stat-container layout and "recently created" table — needed since this doc's `dashboard` demo row above is still unread)
+1. ✅ Left nav, fully expanded (nav ordering) — `01-nav.png`
+2. ✅ Hosted zones list, populated with a few zones (table columns, default visibility) — `02-zones-list.png`
+3. ⬜ Create hosted zone form (the description field's real label) — not captured
+4. ✅ Zone detail — Records tab, populated with a few record types (table columns, tab set, header actions) — `04-records-table.png`
+5. ✅ Quick create record form, with a type selected that shows a TTL field (TTL quick-set presets, type descriptions) — `05-create-record-form.png`
+6. ⬜ Edit hosted zone form (cross-check against #3's description label) — not captured
+7. ⬜ Hosted zones list or Records tab with zero non-required rows (empty-state copy) — not captured
+8. ✅ Dashboard (real feature-card layout) — `08-dashboard.png`
 
 **What is never a source:** the AWS console's rendered DOM. Mirroring it would yield minified class
 names and hand-rolled markup — worse than clean Cloudscape composition, and it would forfeit the
@@ -625,7 +724,8 @@ the right components, state architecture, and data flow. Less surface content, n
 | `FR-B15` immutable-field treatment | §5.5 |
 | `FR-B18a` cascade escape hatch | §5.6 |
 | `FR-C1`, `FR-C7` record-set rendering | §5.3 |
-| `FR-C2`, `FR-C9` record form | §5.4 |
+| `FR-C2`, `FR-C9`, `FR-C9a` record form | §5.4 |
+| `FR-C3a` split panel | §5.3 |
 | `FR-D6` validation from metadata | §5.4 |
 | `FR-G1` dark mode | §1, §8 |
 | `FR-G5` shortcuts | §8 |
@@ -633,3 +733,4 @@ the right components, state architecture, and data flow. Less surface content, n
 | Risk **R2** Cloudscape + App Router | §2 |
 | Risk **R5** unverified UI details | §7 and §10, marked inline |
 | Implementation staging | §11 |
+| [DD-21](./02-design-decisions.md#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it) – [DD-25](./02-design-decisions.md#dd-25--three-cloudscapenextjs-gotchas-found-during-the-revamp) capture-driven revamp | §3, §5.1, §5.2, §5.3, §5.4, §7, §10 |

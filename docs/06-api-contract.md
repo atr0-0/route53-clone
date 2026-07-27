@@ -188,7 +188,9 @@ the UI gates it behind type-to-confirm (`FR-B17`).
 
 `search` matches **record name and any value** (`FR-C4`) — the query that `record_values(value)` is
 indexed for. `type` is repeatable for multi-select filtering (`FR-C5`); `page_size` allows up to
-`100`.
+`100`. **Added 2026-07-27**: `routing_policy` (exact match) and `alias` (boolean — has/hasn't an
+alias target) extend `FR-C5`'s filtering to match the UI revamp's Routing policy and Alias filter
+dropdowns, both server-side like every other list filter in this app.
 
 ```json
 {

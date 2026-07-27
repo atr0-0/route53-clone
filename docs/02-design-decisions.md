@@ -29,6 +29,11 @@ appended as Phases 2–6 proceed; existing entries are never edited, only supers
 | [DD-18](#dd-18--ui-fidelity-full-console-nav-real-dashboard-verified-copy-deck) | UI fidelity: full nav, real dashboard, verified copy deck | Accepted |
 | [DD-19](#dd-19--how-ui-fidelity-is-sourced) | How UI fidelity is sourced: observe, never generate | Accepted |
 | [DD-20](#dd-20--two-stage-implementation-structural-then-additive) | Two-stage implementation: structural, then additive | Accepted |
+| [DD-21](#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it) | Direct console capture completed; UI revamped surface-by-surface against it | Accepted |
+| [DD-22](#dd-22--mocked-actions-get-a-shared-demo-limitation-toast-rather-than-more-coming-soon-routes) | Mocked actions get a shared demo-limitation toast, rather than more Coming Soon routes | Accepted |
+| [DD-23](#dd-23--multi-record-quick-create-built-for-real) | Multi-record quick create built for real | Accepted |
+| [DD-24](#dd-24--record-detail-split-panel-threaded-via-react-context) | Record-detail split panel threaded via React Context | Accepted |
+| [DD-25](#dd-25--three-cloudscapenextjs-gotchas-found-during-the-revamp) | Three Cloudscape/Next.js gotchas found during the revamp | Accepted |
 
 ---
 
@@ -647,3 +652,221 @@ that are deliberate but hard to distinguish from ways that are not. Mitigated by
 being explicit, so "is this stage 2?" is a lookup rather than a judgement call. The staging also
 sequences naturally with the pending console captures — they land during stage 1, and stage 2 is
 where the app is reconciled against them.
+
+---
+
+## DD-21 — Direct console capture completed; UI revamped surface-by-surface against it
+
+**Status:** Accepted · Completes [DD-19](#dd-19--how-ui-fidelity-is-sourced)
+
+**Context.** DD-19 committed to direct console capture as the authority for whatever documentation
+and the Cloudscape demos couldn't settle, but at the time no captures existed yet — everything
+downstream of it (`07-ui-spec.md` §3, §5.1, §5.3, §7) was still written from documentation and
+inference. Once five real screenshots landed in `docs/reference/` (`01-nav.png`, `02-zones-list.png`,
+`04-records-table.png`, `05-create-record-form.png`, `08-dashboard.png`), reviewing them surfaced
+genuine **structural** mismatches, not polish-level nitpicks — most notably that the Dashboard built
+under [DD-18](#dd-18--ui-fidelity-full-console-nav-real-dashboard-verified-copy-deck) bore no
+resemblance to the real layout (stat-tiles-plus-recent-zones vs. a four-card marketing grid), and
+that the left-nav grouping and the zone-detail tab set were both wrong.
+
+**Decision.** Rebuild one UI surface at a time against the captures, in order: login, app-shell nav,
+Dashboard, hosted zones list, zone-detail shell, records tab + record detail, create-record form,
+edit-record form, zone create/edit forms. Each surface: build, `tsc`/lint, Playwright screenshot
+against the matching reference image, fix discrepancies, commit alone — so a long session degrades
+gracefully rather than losing everything to a single bad diff. Concretely, the captures corrected:
+
+- **Nav** (`01-nav.png`, `02-zones-list.png`): flat top-level items (Dashboard, Hosted zones, Health
+  checks, Profiles) rather than everything nested under a "Hosted zones" section; Resolver splits
+  into **Global Resolver** and **VPC Resolver**, not one section; Domains sits after VPC Resolver.
+- **Dashboard** (`08-dashboard.png`): a four-card feature grid (DNS management / Availability
+  monitoring / Traffic management / Domain registration), a Register-domain search box, and an empty
+  Notifications table — not stat tiles and a recent-zones list. Real zone/record counts are kept, but
+  folded into the DNS management card rather than forcing a layout the product doesn't have.
+- **Zone detail** (`04-records-table.png`): "Hosted zone details" is not a tab — it's an
+  `ExpandableSection` above the tab strip, with `Edit` as an inline link inside it, not a standalone
+  header button. The tab set is **Records, Accelerated recovery, DNSSEC signing, Tags** — not
+  "Hosted zone details" / "Query logging" as tabs. Header actions are **Export zone file, Delete
+  zone, Test record, Configure query logging** as flat buttons — no `Actions` dropdown. A **split
+  panel** shows "N records selected" / the selected record's detail, matching the real console.
+- **Create record** (`05-create-record-form.png`): the zone-name suffix next to `Record name` is
+  plain text, not a second disabled input; the record-type option text is the much longer
+  `A – Routes traffic to an IPv4 address and some AWS resources`, not the short `A — IPv4 address`
+  this project's copy deck had carried since DD-18 (sourced from the developer guide's prose, not the
+  live dropdown — a reminder that documentation prose and actual UI strings are not the same source);
+  TTL presets are **1m / 1h / 1d**, no `5m`; and the value field is labelled plain `Value`, not
+  `Value/Route traffic to`.
+
+**Alternatives considered.**
+- *Treat the captures as directional only, keep the existing screens.* Cheaper, but defeats the
+  entire point of DD-19 — `AS-V1` is the first evaluation criterion, and the captures exist
+  specifically to close gaps that documentation can't.
+- *One big rewrite pass instead of surface-by-surface commits.* Faster if nothing goes wrong, but a
+  single commit spanning nine surfaces means a bad diff or a dropped session loses everything;
+  per-surface commits bound the blast radius of either.
+
+**Trade-off accepted.** Nine separate rebuild passes instead of one, and several already-shipped
+requirements (`FR-E2`, `FR-F2`, `FR-B21`, `FR-C9`) needed correcting after the fact rather than
+getting it right the first time — the cost DD-19 explicitly flagged as still owed until captures
+existed. `01-requirements.md` and `07-ui-spec.md` carry `Corrected 2026-07-27` notes at each affected
+requirement rather than silently rewriting history.
+
+---
+
+## DD-22 — Mocked actions get a shared demo-limitation toast, rather than more Coming Soon routes
+
+**Status:** Accepted
+
+**Context.** DD-21's revamp added interactive-looking elements that have no real backing: the
+Dashboard's other three feature cards (`Create health check`, `Create policy`, `Register domain`),
+its Register-domain search and Notifications refresh, two new nav leaves (`Global resolvers`,
+`Outposts`) added purely to complete the nav tree, and the zone-detail shell's `Accelerated
+recovery` tab and `Test record`/`Configure query logging` header buttons. [FR-F1](./01-requirements.md)
+already has a pattern for unbuilt sections — a full `ComingSoon` page inside the shell — but that
+pattern assumes a whole nav leaf's worth of scope; these are individual buttons and one tab on
+screens that are otherwise fully real.
+
+**Decision.** A single shared helper, `pushDemoLimitationToast()`, wraps `pushFlash({type: "info",
+content: "This is a demo — only Hosted zones and DNS records are fully functional here."})`. Every
+mocked interactive element — the three inert feature cards, Register-domain's search and its
+"transfer your domains" link, Notifications' refresh button, the two toast-only nav leaves, the
+`Accelerated recovery` tab, and `Test record`/`Configure query logging` — calls it instead of
+navigating or doing nothing silently.
+
+**Alternatives considered.**
+- *Build two more `ComingSoon` routes for the new nav leaves*, matching `FR-F1`'s existing pattern.
+  Consistent, but disproportionate for two leaves added purely for nav-tree completeness, and it
+  doesn't fit buttons/tabs that live on an otherwise-real page at all — there's no natural route for
+  "the Dashboard's third feature card" to navigate to.
+- *Do nothing on click* (silent no-op). Cheapest, but indistinguishable from a bug — a reviewer
+  clicking `Register domain` and seeing nothing happen reads as broken, not as a stated boundary.
+- *A disabled/greyed-out affordance instead of a clickable one.* Visually honest, but it costs the
+  visual fidelity DD-21 exists to buy — the real console's cards, buttons, and tabs are not disabled.
+
+**Trade-off accepted.** A small class of buttons that look fully functional until clicked. Mitigated
+by the toast's wording being specific and immediate — it names exactly what *is* real (Hosted zones,
+DNS records) rather than a generic "not implemented" — so the boundary is stated the moment it's hit,
+consistent with `FR-F1`'s existing "Coming Soon" tone rather than introducing a second one.
+
+---
+
+## DD-23 — Multi-record quick create built for real
+
+**Status:** Accepted
+
+**Context.** `05-create-record-form.png` shows Quick create record with a **numbered, collapsible
+`Record 1` section** and an `Add another record` button — the real console lets one submission create
+several record sets at once. `FR-C9` only ever specified single-record quick create; extending it to
+match the capture meant deciding whether the multi-record chrome would be cosmetic (an `Add another
+record` button that does nothing real) or functional.
+
+**Decision.** Build it for real. The create-record page holds an array of record drafts, each an
+independently editable, independently deletable `ExpandableSection` numbered `Record N`; `Add another
+record` appends a blank draft; `Create records` submits every draft **sequentially** against the
+existing single-record `POST /hosted-zones/{id}/records` endpoint (no bulk-create endpoint was added
+— this is a frontend-side loop, not new backend scope), stopping and reporting which draft failed if
+one does, and showing a single success flash naming how many records were created.
+
+**Alternatives considered.**
+- *Cosmetic only — `Add another record` shows the demo-limitation toast (DD-22) instead of doing
+  anything.* Consistent with how this session treated other capture-driven additions, but multi-record
+  create is not a peripheral affordance the way "Register domain" is — it's the primary create flow's
+  own headline feature, sitting front and center in the capture, and faking the button a reviewer is
+  most likely to actually try would read worse than not having the capture at all.
+- *A dedicated bulk-create endpoint accepting an array of record bodies.* Fewer round trips and a
+  cleaner atomicity story, but it's new backend surface for a UI-driven request with no `AS-*`
+  parent, and the sequential-loop approach reuses validation, error shapes, and cache invalidation
+  that already exist and are already tested.
+
+**Trade-off accepted.** N separate round trips instead of one, and a failure partway through a batch
+leaves the earlier drafts' records already created — there is no rollback. Acceptable because each
+draft is independently valid before submission (the same validation as single-record create), so a
+mid-batch failure is a genuine per-record rejection (bad grammar, conflicting name) rather than a
+partial-write hazard, and the error message names which record and how many succeeded before it.
+
+---
+
+## DD-24 — Record-detail split panel threaded via React Context
+
+**Status:** Accepted
+
+**Context.** `04-records-table.png` shows the real Records tab with an `AppLayout` **split panel**:
+"N records selected" collapsed to "Select a record to see its details" when nothing is selected, and
+the selected record's full field set when exactly one is. `splitPanel` is an `AppLayout`-level prop
+owned by `app/(console)/layout.tsx`, but the content it needs to show is page-specific state (which
+record is selected) that only the Records tab page component has.
+
+**Decision.** A `SplitPanelContext` (mirroring the existing `BreadcrumbsContext` pattern) lets a page
+call `useSetSplitPanel(panel, key)` with its current header/content and an effect cleans up on
+unmount; `(console)/layout.tsx` reads the context and renders it into `AppLayout`'s `splitPanel` prop,
+auto-opening it the first time a page provides one. `splitPanelSize` is **explicitly controlled**
+(260px, resizable) rather than left to `AppLayout`'s own uncontrolled default — see DD-25.
+
+**Alternatives considered.**
+- *Render the detail inline in the table row (an expandable row), skip the split panel entirely.*
+  Much less plumbing, but it isn't what the capture shows, and split panels are themselves a
+  Cloudscape pattern this project hasn't used yet.
+- *Lift all Records-tab state into the layout component.* Avoids a new context, but couples an
+  `AppLayout`-owning component that every authenticated page shares to one page's selection state —
+  every other page would carry dead code for a panel it never uses.
+
+**Trade-off accepted.** A second context alongside `BreadcrumbsContext` for what is conceptually the
+same kind of problem (page-specific content needed at the `AppLayout` level), rather than a single
+generalized "shell slots" context covering both. Accepted because the two have different lifecycles
+— breadcrumbs are set once per page render, the split panel's content changes on every selection
+change — and a shared generic slot API would have to accommodate both at the cost of clarity in each.
+
+---
+
+## DD-25 — Three Cloudscape/Next.js gotchas found during the revamp
+
+**Status:** Accepted
+
+**Context.** Building DD-21 through DD-24 surfaced three defects that had nothing to do with visual
+fidelity and everything to do with Cloudscape/Next.js default behaviour not matching what this
+codebase assumed. None were caught earlier because the interactions that trigger them — clicking a
+secondary button inside a form, selecting a table row with a split panel open, failing a login —
+hadn't been exercised end-to-end with network/console monitoring until the revamp's Playwright
+verification loop did exactly that.
+
+**Decision — fix all three, document the pattern so it isn't reintroduced.**
+
+1. **Cloudscape `Button` defaults `formAction` to `"submit"`.** Any button rendered inside a native
+   `<form>` — a `Delete` action on a record draft, a TTL preset, `Add another record`, even `Cancel`
+   — silently submits the form on click unless it isn't the intended submit action. This was already
+   a latent bug on every existing form (the TTL preset buttons on the original single-record create
+   page), but went unnoticed until the multi-record form's `Add another record` button made it
+   produce a visibly wrong result (a premature, partial submission). **Fix:** every button in every
+   form that isn't the primary submit action now sets `formAction="none"` explicitly — audited across
+   all five forms in the app, not just the one that surfaced it.
+2. **`AppLayout`'s `splitPanelSize` defaults to roughly half the viewport height when left
+   uncontrolled.** This silently covered the records table's row checkboxes with the split panel
+   itself, making row selection impossible without ever throwing an error — a Playwright click on a
+   checkbox simply timed out because a different element was on top of it at that screen position.
+   **Fix:** `splitPanelSize` is controlled (DD-24), defaulting to 260px.
+3. **The app-wide 401 interceptor in `lib/api/client.ts` treated every 401 as a session expiry**,
+   including the login endpoint's own 401 for wrong credentials (`FR-A3`) — so a failed sign-in
+   force-reloaded `/login` before React could render the inline error, silently wiping the form
+   instead of showing *"Your sign-in details are incorrect. Please try again."* **Fix:** the
+   interceptor now checks the request's OpenAPI `schemaPath` and skips the redirect for
+   `/v1/auth/login` specifically; every other endpoint's 401 still triggers the existing
+   session-expiry redirect unchanged.
+
+**Alternatives considered.**
+- *Leave the `formAction` issue as a one-off fix on the button that surfaced it.* Cheaper in the
+  moment, but the same default silently affects every other secondary button in the app; auditing all
+  five forms once was cheaper than finding the same bug five more times.
+- *Give the split panel an uncontrolled size and just document the limitation.* Rejected — it isn't a
+  cosmetic issue, it makes a core interaction (selecting a record) actually unusable at the default
+  size.
+- *Special-case the redirect on the frontend (skip it only when already on `/login`), rather than at
+  the interceptor.* This was actually the interceptor's original guard (`isAlreadyOnLogin`) — but it
+  still reloads `/login`, just without the `?next=` param, which is exactly the bug: reloading is the
+  problem, not the destination.
+
+**Trade-off accepted.** None of these are visible in a code read of any single file in isolation —
+the `formAction` and `splitPanelSize` defaults are Cloudscape's internal behaviour, and the 401
+interceptor bug only manifests on the one endpoint it wasn't written to think about. All three were
+found only because the revamp's verification loop (build → screenshot → **drive the actual
+interaction in a real browser**) went past visual comparison into functional exercising. This is the
+argument for keeping that loop even on stage-2/polish work, not just structural stage 1
+([DD-20](#dd-20--two-stage-implementation-structural-then-additive)).

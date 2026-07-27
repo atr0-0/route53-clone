@@ -286,15 +286,23 @@ record screen against the captures at the same viewport shows no structural diff
 
 ---
 
-## 6. The pending console capture
+## 6. The console capture — completed 2026-07-27
 
-The only outstanding input. ~15 minutes, **$0** — Route53's pricing page confirms *"A hosted zone
-that is deleted within 12 hours of creation is not charged."*
+Five of the eight planned screens were captured and used (`01-nav.png`, `02-zones-list.png`,
+`04-records-table.png`, `05-create-record-form.png`, `08-dashboard.png` — full list and status in
+[UI spec §10](./07-ui-spec.md)); three (`#3` create-zone form, `#6` edit-zone form, `#7` an
+empty-state screen) were not, and their target facts remain `[UNVERIFIED]`.
 
-Create a throwaway zone, add ~8 records across types, capture the eight screens listed in
-[UI spec §10](./07-ui-spec.md), delete the zone within 12 hours. Captures go in `docs/reference/`.
-
-**Deadline: before Slice 6.** Not blocking before then — Slices 0–5 never touch the open items.
+Reviewing the five against the already-built UI surfaced structural mismatches, not just copy
+corrections — the Dashboard, the left nav, and the zone-detail tab set had all been built to a
+plausible-but-wrong shape. That triggered a full surface-by-surface rebuild against the captures,
+documented in
+[DD-21](./02-design-decisions.md#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it)
+through
+[DD-25](./02-design-decisions.md#dd-25--three-cloudscapenextjs-gotchas-found-during-the-revamp),
+run as its own session after Slices 0–9 and the original Stage 2 polish were otherwise complete —
+later than this section's original "before Slice 6" deadline, since the captures themselves arrived
+later than planned.
 
 ---
 

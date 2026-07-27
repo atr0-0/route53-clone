@@ -28,6 +28,11 @@ Genuinely implemented, backed by the database, and exercised by tests.
 | **Domain rules** | CNAME-at-apex, CNAME coexistence, required-record protection, non-empty-zone deletion, and Route53's real quotas are all enforced. |
 | **Auth session** | Real JWT issued by the backend in an httpOnly cookie; real route guarding; real 401 handling. |
 | **Import / export** | BIND parsing and serialisation are real, including the atomic dry-run preview. |
+| **Dashboard** | The post-sign-in landing page is a real screen matching the live console's actual layout (a four-feature-card grid, verified against direct capture — [DD-21](./02-design-decisions.md#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it)), showing genuine zone/record counts. Only specific actions inside it are mocked — see §1.2 #16. |
+| **Multi-record create** | The record-create form's "Add another record" builds and submits **N genuinely separate records** in one confirm, not a cosmetic button. [DD-23](./02-design-decisions.md#dd-23--multi-record-quick-create-built-for-real) |
+| **Record-detail split panel** | Selecting a record on the Records tab opens a real `AppLayout` split panel showing that record's full field set, matching the live console. [DD-24](./02-design-decisions.md#dd-24--record-detail-split-panel-threaded-via-react-context) |
+| **Record filters** | Type, Routing policy, and Alias filters on the Records tab are all genuine server-side filters — matching real column data, not just UI decoration. (Routing-policy *evaluation* remains mocked per #10 below — only the filter is real.) |
+| **Zone tags** | The zone detail page's Tags tab shows the zone's real tags, read from the same data the create/edit forms write. |
 
 ### 1.2 Mocked
 
@@ -44,8 +49,11 @@ Genuinely implemented, backed by the database, and exercised by tests.
 | 9 | **Alias targets** | The Alias toggle works and the picker is populated from a **static list** (CloudFront, S3 website endpoint, ELB, API Gateway). No real AWS resources are queried, and targets are never resolved. | `AS-O4` |
 | 10 | **Routing policies** | All eight are selectable and their configuration is stored and displayed. **Only Simple is functional.** The other seven — Weighted, Geolocation, Geoproximity, Latency, IP-based, Multivalue answer, Failover — are **never evaluated**, because evaluation requires DNS resolution, which does not exist here. | `AS-O4` |
 | 11 | **Health checks** | Placeholder page. No endpoint is ever checked. | `AS-M3` |
-| 12 | **Dashboard, Traffic Policies, Resolver, Profiles** | "Coming Soon" pages inside the real app shell. | `AS-M1`, `AS-M2`, `AS-M4`, `AS-M5` |
-| 13 | **Query logging & DNSSEC tabs** | Present on the zone detail page as placeholders, matching the real console's tab set. | Console parity |
+| 12 | **Traffic Policies, Resolver, Profiles** | "Coming Soon" pages inside the real app shell. | `AS-M2`, `AS-M4`, `AS-M5` |
+| 13 | **DNSSEC signing tab** | Present on the zone detail page as a placeholder, matching the real console's tab set. | Console parity |
+| 13a | **Accelerated recovery tab & "Configure query logging" / "Test record" header buttons** | Present, matching the real console — selecting/clicking shows the shared demo-limitation toast rather than a working feature or a separate placeholder page. `[DERIVED]` | [DD-22](./02-design-decisions.md#dd-22--mocked-actions-get-a-shared-demo-limitation-toast-rather-than-more-coming-soon-routes) |
+| 13b | **Dashboard's other three feature cards, Register domain, and Notifications** | Visually identical to the real console. Clicking `Create health check`, `Create policy`, `Register domain`, the domain-transfer link, or the Notifications refresh button shows the shared demo-limitation toast. Only `Create hosted zone` (DNS management card) is a real action. | [DD-22](./02-design-decisions.md#dd-22--mocked-actions-get-a-shared-demo-limitation-toast-rather-than-more-coming-soon-routes) |
+| 13c | **"Global resolvers" and "Outposts" nav items, "Switch to wizard" link** | Added to the nav tree / create-record form purely to match the real console's structure. Clicking shows the shared demo-limitation toast instead of navigating. | [DD-22](./02-design-decisions.md#dd-22--mocked-actions-get-a-shared-demo-limitation-toast-rather-than-more-coming-soon-routes) |
 | 14 | **Hosted zone IDs** | Generated in AWS's `Z…` format. Real-looking, not real AWS identifiers. | Console parity |
 | 15 | **Seed data** | ~15 zones and ~90 records, loaded from declarative fixtures so the demo is never empty. Content is plausible rather than placeholder — SPF/DKIM/DMARC TXT records, real-shaped MX, `www`/`api`/`blog` records. One flagship zone carries ≥25 records covering all nine types. See §5. | Reviewability |
 
@@ -96,7 +104,7 @@ are summarised here; the full register — including 32 routine defaults — is
 | **A1** | "Edit Hosted Zones" and "Delete Hosted Zones" are unqualified, but real Route53 restricts both | Build to the real product, and add escape hatches so no capability is ever hidden behind an error. Justified by the brief's own *"feel like Route53 rather than a generic CRUD application"* |
 | **A2** | The brief never mentions zone types, tags, routing policies, alias records, or nameservers | Include them anyway — they are visible **columns** in the console tables being compared against. Every such addition is tagged `[DERIVED]` in the SRS and listed in [§14.2](./01-requirements.md) |
 | **A3** | "DNS Records" does not say how records are modelled | Route53's record-set model: `(name, type, set identifier)` holding an ordered value list |
-| **A4** | Route53's exact console details are not all publicly documented | Originally: verify against the AWS Developer Guide, mark the rest `[UNVERIFIED]`, use no screenshots. **Revised** — three sources are now used: AWS docs, AWS's own [Cloudscape demos](https://github.com/cloudscape-design/demos), and direct console capture. Between them this **found six errors** in earlier drafts (§4) |
+| **A4** | Route53's exact console details are not all publicly documented | Originally: verify against the AWS Developer Guide, mark the rest `[UNVERIFIED]`, use no screenshots. **Revised** — three sources are now used: AWS docs, AWS's own [Cloudscape demos](https://github.com/cloudscape-design/demos), and direct console capture. Between them this found six factual/copy errors plus, once captures existed, a further set of structural UI mismatches — nav grouping, Dashboard layout, zone-detail tabs (§4) |
 | **A5** | "Support common Route53 record types such as…" — support, or validate? | Validate. The backend owns all nine grammars and serves them to the frontend via `GET /record-types`, so they are defined once rather than duplicated in TypeScript |
 | **A6** | Nothing is said about destructive-action confirmation | Friction scales with blast radius: simple confirm for one record or an empty zone, type-to-confirm for cascade and bulk deletes |
 
@@ -109,9 +117,10 @@ UTC storage with local-time rendering. Full list and rationale in [SRS §4.2](./
 
 ## 4. Notes
 
-**Accuracy.** Nothing about Route53's behaviour was written from memory and left there. Two
-verification passes were run against primary sources, and between them they corrected **six** things
-earlier drafts had wrong:
+**Accuracy.** Nothing about Route53's behaviour was written from memory and left there. Three
+verification passes were run against primary sources — documentation, AWS's own Cloudscape demos, and
+finally direct console capture — and between them they corrected six factual/copy errors plus a
+further round of **structural** UI mismatches described below:
 
 *Against the AWS Route53 Developer Guide* — the CAA `tag` rule (any alphanumeric tag, not a fixed
 three-value enum), the values-per-record-set quota (400, not 100), the permitted characters in zone
@@ -125,18 +134,44 @@ name (that is the S3/RDS pattern), and server-side tables require debounced filt
 `onDelayedChange`, without which every keystroke fires an API request.
 
 The console procedure pages also pinned down exact UI strings that would otherwise have been
-plausible guesses: the record type dropdown reads `A — IPv4 address` rather than `A`, the routing
-option is `Simple routing`, the submit button is `Create records` (plural), multiple values are
-allowed for every type **except** CNAME, NS records accept only simple routing, and the zone apex is
-created by leaving the name **blank** — the console explicitly warns against typing `@`.
+plausible guesses: the routing option is `Simple routing`, the submit button is `Create records`
+(plural), multiple values are allowed for every type **except** CNAME, NS records accept only simple
+routing, and the zone apex is created by leaving the name **blank** — the console explicitly warns
+against typing `@`.
+
+*Against five direct captures of the live console* (`docs/reference/*.png` —
+[DD-21](./02-design-decisions.md#dd-21--direct-console-capture-completed-ui-revamped-surface-by-surface-against-it)),
+taken after the documentation and Cloudscape-demo passes above, which corrected **structural**
+mismatches neither source could have caught: the left-nav's real grouping (flat top-level items,
+Resolver split into *Global Resolver* and *VPC Resolver*); the Dashboard's real layout (a four-card
+feature grid, not stat tiles and a recent-zones table); the zone-detail page's real tab set
+(*Records, Accelerated recovery, DNSSEC signing, Tags*, with "Hosted zone details" as an expandable
+panel above the tabs rather than a tab itself); and, in the record-type dropdown, the developer
+guide's shorter prose (`A — IPv4 address`) turned out to **not** match the live console's actual
+option text (`A – Routes traffic to an IPv4 address and some AWS resources`) — a live capture beats
+documentation prose even where both exist, because they are not guaranteed to describe the same
+string.
 
 Sources are listed in [SRS §15](./01-requirements.md) and [UI spec §10](./07-ui-spec.md).
 
-**What is still unverified.** AWS does not publish console *layouts*, so these remain best-effort and
-may differ from the live console: exact table column sets and their default visibility,
-left-navigation ordering, the NS record's default TTL, hosted zone ID character format, TTL
-quick-set presets, date formatting, and the hosted-zone description field's label. All are marked
-`[UNVERIFIED]` inline rather than quietly assumed.
+**What is still unverified.** AWS does not publish console *layouts*, and the five captures taken
+don't cover every screen, so these remain best-effort and may differ from the live console: the NS
+record's default TTL, hosted zone ID character format, console date formatting, and the hosted-zone
+description field's label (no zone create/edit screen was captured). Table column sets, left-nav
+ordering, and the record-create form's TTL quick-set presets were previously on this list and are now
+resolved by direct capture (`02-zones-list.png`, `04-records-table.png`, `01-nav.png`,
+`05-create-record-form.png`). Remaining items are marked `[UNVERIFIED]` inline rather than quietly
+assumed.
+
+**Three implementation defects found and fixed during the revamp** (none related to visual fidelity —
+see [DD-25](./02-design-decisions.md#dd-25--three-cloudscapenextjs-gotchas-found-during-the-revamp)
+for full detail): a Cloudscape `Button` defaults to submitting its parent `<form>` unless told
+otherwise, which meant secondary buttons (`Cancel`, per-record `Delete`, TTL presets, `Add another
+record`) were silently triggering premature submissions; `AppLayout`'s split panel defaulted to
+roughly half the viewport height, covering the records table's row checkboxes; and the app-wide `401`
+handler was force-reloading `/login` on the login endpoint's *own* failed-login response, wiping the
+"incorrect credentials" message before it could render. All three are fixed and covered by the
+Playwright verification pass each surface went through.
 
 **How it is built.** Frontend on [Cloudscape](https://cloudscape.design/) under the Next.js App
 Router, talking to a FastAPI backend through a same-origin rewrite proxy so the session cookie is
@@ -166,9 +201,12 @@ both explained in §2 above. [SRS §14.2](./01-requirements.md) separately lists
   blocklist mechanism.
 - The hosted backend runs on a free tier and may cold-start on the first request after a period of
   inactivity.
-- The frontend and backend are deployed to different origins, so the session cookie is cross-site
-  (`SameSite=None; Secure`). Browsers with third-party cookie blocking enabled may require
-  the site to be permitted.
+- **The live backend may briefly lag the live frontend after a UI-only session.** Vercel redeploys
+  automatically on push, but the PythonAnywhere backend does not — it needs a manual `git pull` and
+  web-app reload. If the frontend has shipped ahead of that (as it did for the Records tab's Routing
+  policy/Alias filters — real, backend-filtered params added in the same session as the UI revamp),
+  those specific dropdowns render correctly but silently filter nothing on the live demo until the
+  backend catches up, since FastAPI ignores unrecognised query parameters rather than erroring.
 
 ---
 
