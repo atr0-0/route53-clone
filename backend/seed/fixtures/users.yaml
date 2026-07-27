@@ -1,0 +1,12 @@
+# Seeded users (AS-A1 — no signup). Demo password documented here for Session B
+# (login) and Session E (README) to find. seed.py bcrypt-hashes before insert —
+# the plaintext below is never stored.
+- email: admin@example.com
+  display_name: Admin User
+  password: DemoPass123!
+- email: jane.doe@example.com
+  display_name: Jane Doe
+  password: DemoPass123!
+- email: devops@example.com
+  display_name: DevOps Team
+  password: DemoPass123!

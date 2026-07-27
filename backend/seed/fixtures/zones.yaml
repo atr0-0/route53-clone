@@ -1,0 +1,203 @@
+# Demo seed data (DR-10). owner resolves against users.yaml by email.
+# SOA and apex NS are NOT listed here — hosted_zone_service.create_zone() generates
+# them the same way a real zone create does (Slice 1's acceptance criterion).
+#
+# example.com is the flagship zone: >=25 record sets spanning all nine types
+# (extends the worked example from 05-data-model.md §7 with AAAA, PTR, and SRV).
+
+- name: example.com
+  type: PUBLIC
+  description: Primary production zone
+  owner: admin@example.com
+  tags: { Environment: production, Team: platform }
+  records:
+    - { name: example.com,             type: A,     ttl: 300,   values: [192.0.2.1] }
+    - { name: www.example.com,         type: A,     ttl: 300,   values: [192.0.2.1, 192.0.2.2, 192.0.2.3] }
+    - { name: app.example.com,         type: A,     ttl: 300,   values: [192.0.2.10] }
+    - { name: api.example.com,         type: A,     ttl: 300,   values: [192.0.2.11, 192.0.2.12] }
+    - { name: cdn.example.com,         type: A,     ttl: 300,   values: [192.0.2.20, 192.0.2.21] }
+    - { name: mail.example.com,        type: A,     ttl: 3600,  values: [192.0.2.30] }
+    - { name: vpn.example.com,         type: A,     ttl: 300,   values: [192.0.2.40] }
+    - { name: secure.example.com,      type: A,     ttl: 300,   values: [192.0.2.50, 192.0.2.51] }
+    - { name: example.com,             type: AAAA,  ttl: 300,   values: ["2606:2800:220:1:248:1893:25c8:1946"] }
+    - { name: www.example.com,         type: AAAA,  ttl: 300,   values: ["2606:2800:220:1:248:1893:25c8:1946"] }
+    - { name: app.example.com,         type: AAAA,  ttl: 300,   values: ["2606:2800:220:1:248:1893:25c8:1947"] }
+    - { name: blog.example.com,        type: CNAME, ttl: 300,   values: [ghs.googlehosted.com] }
+    - { name: shop.example.com,        type: CNAME, ttl: 300,   values: [shops.myshopify.com] }
+    - { name: docs.example.com,        type: CNAME, ttl: 300,   values: [example.readthedocs.io] }
+    - { name: support.example.com,     type: CNAME, ttl: 300,   values: [support.zendesk.com] }
+    - { name: mobile.example.com,      type: CNAME, ttl: 300,   values: [mobile-app.example.com] }
+    - { name: example.com,             type: MX,    ttl: 3600,  values: ["1 aspmx.l.google.com", "5 alt1.aspmx.l.google.com"] }
+    - { name: example.com,             type: TXT,   ttl: 300,   values: ['"v=spf1 include:_spf.google.com ~all"'] }
+    - { name: _dmarc.example.com,      type: TXT,   ttl: 300,   values: ['"v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com"'] }
+    - { name: _acme-challenge.example.com, type: TXT, ttl: 300, values: ['"validation-token-abc123def456"'] }
+    - { name: staging.example.com,     type: NS,    ttl: 172800, values: [ns-1.awsdns-01.com, ns-2.awsdns-02.net] }
+    - { name: partner-api.example.com, type: NS,    ttl: 172800, values: [ns-3.awsdns-03.org, ns-4.awsdns-04.co.uk] }
+    - { name: mail-relay.example.com,  type: PTR,   ttl: 300,   values: [mailhost.example.com] }
+    - { name: legacy-gateway.example.com, type: PTR, ttl: 300,  values: [gateway.example.com] }
+    - { name: _sip._tcp.example.com,   type: SRV,   ttl: 300,   values: ["10 5 5060 sipserver.example.com"] }
+    - { name: _sips._tcp.example.com,  type: SRV,   ttl: 300,   values: ["10 5 5061 sipserver.example.com"] }
+    - { name: example.com,             type: CAA,   ttl: 300,   values: ['0 issue "letsencrypt.org"'] }
+
+- name: shopfront.io
+  type: PUBLIC
+  description: E-commerce storefront
+  owner: jane.doe@example.com
+  tags: { Environment: production, Team: commerce }
+  records:
+    - { name: shopfront.io,     type: A,    ttl: 300,  values: [192.0.2.60, 192.0.2.61] }
+    - { name: www.shopfront.io, type: A,    ttl: 300,  values: [192.0.2.60] }
+    - { name: cdn.shopfront.io, type: CNAME, ttl: 300, values: [d111111abcdef8.cloudfront.net] }
+    - { name: shopfront.io,     type: MX,   ttl: 3600, values: ["10 mx1.improvmx.com", "20 mx2.improvmx.com"] }
+    - { name: shopfront.io,     type: TXT,  ttl: 300,  values: ['"v=spf1 include:_spf.improvmx.com ~all"'] }
+    - { name: shopfront.io,     type: AAAA, ttl: 300,  values: ["2606:2800:220:1:248:1893:25c8:2000"] }
+
+- name: mycompany-internal.local
+  type: PRIVATE
+  description: Internal corporate services
+  owner: devops@example.com
+  tags: { Environment: internal, Team: it }
+  records:
+    - { name: mycompany-internal.local,      type: A,   ttl: 300,   values: [10.0.1.1] }
+    - { name: intranet.mycompany-internal.local, type: A, ttl: 300, values: [10.0.1.10] }
+    - { name: vpn.mycompany-internal.local,  type: A,   ttl: 300,   values: [10.0.1.20] }
+    - { name: legacy.mycompany-internal.local, type: NS, ttl: 172800, values: [ns-5.awsdns-05.com, ns-6.awsdns-06.net] }
+    - { name: mycompany-internal.local,      type: TXT, ttl: 300,   values: ['"internal-use-only"'] }
+
+- name: blog-platform.net
+  type: PUBLIC
+  description: Company blog platform
+  owner: admin@example.com
+  tags: { Environment: production, Team: marketing }
+  records:
+    - { name: blog-platform.net,     type: A,    ttl: 300,  values: [192.0.2.70] }
+    - { name: www.blog-platform.net, type: CNAME, ttl: 300, values: [blog-platform.net] }
+    - { name: blog-platform.net,     type: MX,   ttl: 3600, values: ["1 aspmx.l.google.com", "5 alt1.aspmx.l.google.com"] }
+    - { name: blog-platform.net,     type: TXT,  ttl: 300,  values: ['"v=spf1 include:_spf.google.com ~all"'] }
+    - { name: _dmarc.blog-platform.net, type: TXT, ttl: 300, values: ['"v=DMARC1; p=none; rua=mailto:dmarc@blog-platform.net"'] }
+
+- name: api-gateway.dev
+  type: PUBLIC
+  description: Public API gateway
+  owner: jane.doe@example.com
+  tags: { Environment: production, Team: platform }
+  records:
+    - { name: api-gateway.dev,    type: A,    ttl: 300,  values: [192.0.2.80, 192.0.2.81] }
+    - { name: v2.api-gateway.dev, type: A,    ttl: 300,  values: [192.0.2.82] }
+    - { name: api-gateway.dev,    type: AAAA, ttl: 300,  values: ["2606:2800:220:1:248:1893:25c8:3000"] }
+    - { name: api-gateway.dev,    type: TXT,  ttl: 300,  values: ['"v=spf1 -all"'] }
+    - { name: api-gateway.dev,    type: MX,   ttl: 3600, values: ["10 mail.api-gateway.dev"] }
+
+- name: staging-internal.corp
+  type: PRIVATE
+  description: Staging environment
+  owner: devops@example.com
+  tags: { Environment: staging, Team: platform }
+  records:
+    - { name: staging-internal.corp,      type: A, ttl: 300, values: [10.0.2.1] }
+    - { name: app.staging-internal.corp,  type: A, ttl: 300, values: [10.0.2.10] }
+    - { name: db.staging-internal.corp,   type: A, ttl: 300, values: [10.0.2.20] }
+    - { name: cache.staging-internal.corp, type: A, ttl: 300, values: [10.0.2.30] }
+
+- name: media-assets.cloud
+  type: PUBLIC
+  description: Static media CDN
+  owner: admin@example.com
+  tags: { Environment: production, Team: platform }
+  records:
+    - { name: media-assets.cloud,        type: A,     ttl: 300, values: [192.0.2.90, 192.0.2.91, 192.0.2.92] }
+    - { name: images.media-assets.cloud, type: CNAME, ttl: 300, values: [d222222abcdef8.cloudfront.net] }
+    - { name: videos.media-assets.cloud, type: CNAME, ttl: 300, values: [d333333abcdef8.cloudfront.net] }
+    - { name: fonts.media-assets.cloud,  type: CNAME, ttl: 300, values: [d444444abcdef8.cloudfront.net] }
+
+- name: devtools.company.com
+  type: PRIVATE
+  description: Internal developer tooling
+  owner: devops@example.com
+  tags: { Environment: internal, Team: platform }
+  records:
+    - { name: devtools.company.com,          type: A,  ttl: 300, values: [10.0.3.1] }
+    - { name: ci.devtools.company.com,       type: A,  ttl: 300, values: [10.0.3.10] }
+    - { name: registry.devtools.company.com, type: A,  ttl: 300, values: [10.0.3.20] }
+    - { name: monitoring.devtools.company.com, type: A, ttl: 300, values: [10.0.3.30] }
+    - { name: legacy.devtools.company.com,   type: NS, ttl: 172800, values: [ns-7.awsdns-07.org, ns-8.awsdns-08.co.uk] }
+
+- name: customerportal.app
+  type: PUBLIC
+  description: Customer self-service portal
+  owner: jane.doe@example.com
+  tags: { Environment: production, Team: support }
+  records:
+    - { name: customerportal.app,     type: A,    ttl: 300,  values: [192.0.2.100, 192.0.2.101] }
+    - { name: www.customerportal.app, type: CNAME, ttl: 300, values: [customerportal.app] }
+    - { name: customerportal.app,     type: MX,   ttl: 3600, values: ["10 mail.customerportal.app"] }
+    - { name: customerportal.app,     type: TXT,  ttl: 300,  values: ['"v=spf1 include:_spf.google.com ~all"'] }
+    - { name: _dmarc.customerportal.app, type: TXT, ttl: 300, values: ['"v=DMARC1; p=quarantine; rua=mailto:dmarc@customerportal.app"'] }
+
+- name: analytics-data.io
+  type: PUBLIC
+  description: Analytics ingestion pipeline
+  owner: admin@example.com
+  tags: { Environment: production, Team: data }
+  records:
+    - { name: analytics-data.io,           type: A,    ttl: 300, values: [192.0.2.110] }
+    - { name: collector.analytics-data.io, type: A,    ttl: 300, values: [192.0.2.111] }
+    - { name: collector.analytics-data.io, type: AAAA, ttl: 300, values: ["2606:2800:220:1:248:1893:25c8:4000"] }
+    - { name: analytics-data.io,           type: TXT,  ttl: 300, values: ['"v=spf1 -all"'] }
+
+- name: secure-vault.internal
+  type: PRIVATE
+  description: Secrets management
+  owner: devops@example.com
+  tags: { Environment: internal, Team: security }
+  records:
+    - { name: secure-vault.internal,         type: A, ttl: 300, values: [10.0.4.1] }
+    - { name: vault-1.secure-vault.internal, type: A, ttl: 300, values: [10.0.4.10] }
+    - { name: vault-2.secure-vault.internal, type: A, ttl: 300, values: [10.0.4.11] }
+    - { name: vault-3.secure-vault.internal, type: A, ttl: 300, values: [10.0.4.12] }
+
+- name: partner-integration.com
+  type: PUBLIC
+  description: Partner API integration
+  owner: jane.doe@example.com
+  tags: { Environment: production, Team: platform }
+  records:
+    - { name: partner-integration.com,     type: A,    ttl: 300,  values: [192.0.2.120] }
+    - { name: www.partner-integration.com, type: CNAME, ttl: 300, values: [partner-integration.com] }
+    - { name: partner-integration.com,     type: MX,   ttl: 3600, values: ["1 aspmx.l.google.com", "5 alt1.aspmx.l.google.com"] }
+    - { name: partner-integration.com,     type: TXT,  ttl: 300,  values: ['"v=spf1 include:_spf.google.com ~all"'] }
+    - { name: partner-integration.com,     type: AAAA, ttl: 300,  values: ["2606:2800:220:1:248:1893:25c8:5000"] }
+
+- name: mobile-backend.net
+  type: PUBLIC
+  description: Mobile app backend
+  owner: admin@example.com
+  tags: { Environment: production, Team: mobile }
+  records:
+    - { name: mobile-backend.net,        type: A,     ttl: 300, values: [192.0.2.130, 192.0.2.131] }
+    - { name: push.mobile-backend.net,   type: A,     ttl: 300, values: [192.0.2.132] }
+    - { name: mobile-backend.net,        type: TXT,   ttl: 300, values: ['"v=spf1 -all"'] }
+    - { name: status.mobile-backend.net, type: CNAME, ttl: 300, values: [statuspage.io] }
+
+- name: legacy-system.corp
+  type: PRIVATE
+  description: Legacy ERP system
+  owner: devops@example.com
+  tags: { Environment: internal, Team: it }
+  records:
+    - { name: legacy-system.corp,          type: A,     ttl: 300, values: [10.0.5.1] }
+    - { name: erp.legacy-system.corp,      type: A,     ttl: 300, values: [10.0.5.10] }
+    - { name: backup.legacy-system.corp,   type: A,     ttl: 300, values: [10.0.5.20] }
+    - { name: reports.legacy-system.corp,  type: CNAME, ttl: 300, values: [erp.legacy-system.corp] }
+
+- name: sandbox-testing.dev
+  type: PUBLIC
+  description: Developer sandbox
+  owner: jane.doe@example.com
+  tags: { Environment: sandbox, Team: platform }
+  records:
+    - { name: sandbox-testing.dev,          type: A,     ttl: 300, values: [192.0.2.140] }
+    - { name: feature-1.sandbox-testing.dev, type: A,    ttl: 300, values: [192.0.2.141] }
+    - { name: feature-2.sandbox-testing.dev, type: A,    ttl: 300, values: [192.0.2.142] }
+    - { name: sandbox-testing.dev,          type: TXT,   ttl: 300, values: ['"v=spf1 -all"'] }
+    - { name: preview.sandbox-testing.dev,  type: CNAME, ttl: 300, values: [sandbox-testing.dev] }

@@ -22,7 +22,11 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Prefer a fresh DATABASE_URL from the environment over the cached `settings`
+# singleton — `app.config` is imported once per process, so tests that need an
+# isolated temp database (each with its own DATABASE_URL) would otherwise all
+# get migrated against whatever URL was current at the first import.
+config.set_main_option("sqlalchemy.url", os.environ.get("DATABASE_URL") or settings.database_url)
 
 target_metadata = Base.metadata
 
