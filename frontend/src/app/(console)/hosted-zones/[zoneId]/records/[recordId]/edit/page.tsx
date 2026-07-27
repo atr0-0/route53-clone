@@ -70,7 +70,7 @@ export default function EditRecordPage() {
           errorText={updateRecord.isError ? getApiErrorMessage(updateRecord.error) : undefined}
           actions={
             <SpaceBetween direction="horizontal" size="xs">
-              <Button variant="link" onClick={() => router.push(`/hosted-zones/${params.zoneId}`)}>
+              <Button variant="link" formAction="none" onClick={() => router.push(`/hosted-zones/${params.zoneId}`)}>
                 Cancel
               </Button>
               <Button variant="primary" loading={updateRecord.isPending}>
@@ -97,8 +97,8 @@ export default function EditRecordPage() {
               ) : (
                 <>
                   <FormField
-                    label="Value/Route traffic to"
-                    description="Enter each value on a separate line."
+                    label="Value"
+                    description="Enter multiple values on separate lines."
                   >
                     {record.type === "CNAME" ? (
                       <Input value={valuesText} onChange={({ detail }) => setValuesText(detail.value)} />
