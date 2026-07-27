@@ -7,21 +7,55 @@ import TopNavigation from "@cloudscape-design/components/top-navigation";
 import SideNavigation, { type SideNavigationProps } from "@cloudscape-design/components/side-navigation";
 import BreadcrumbGroup from "@cloudscape-design/components/breadcrumb-group";
 import Flashbar from "@cloudscape-design/components/flashbar";
+import Badge from "@cloudscape-design/components/badge";
 import { Mode } from "@cloudscape-design/global-styles";
 import { useSession, useLogout } from "@/features/auth/queries";
-import { useFlashItems, dismissFlash } from "@/lib/notifications";
+import { useFlashItems, dismissFlash, pushDemoLimitationToast } from "@/lib/notifications";
 import { BreadcrumbsProvider, useBreadcrumbItems } from "@/components/shell/BreadcrumbsContext";
 import { KeyboardShortcutsProvider } from "@/components/shell/KeyboardShortcutsContext";
 import { useKeyboardShortcuts } from "@/components/shell/useKeyboardShortcuts";
 import { ShortcutsHelpModal } from "@/components/shell/ShortcutsHelpModal";
 import { useColorMode, toggleColorMode } from "@/lib/theme";
 
-// Reproduces Route53's real console tree (FR-E2, UI spec §3), including
-// sections the brief never names — a short nav is one of the first things
-// that reads as "not the real thing." Every leaf but Hosted zones routes to
-// the shared ComingSoon page.
+// Reproduces the real Route53 console tree, verified against a direct capture
+// (docs/reference/01-nav.png, 02-zones-list.png) rather than guessed — flat
+// grouping and ordering corrected against that screenshot: Dashboard/Hosted
+// zones/Health checks/Profiles are flat top-level items (not a "Hosted zones"
+// section), Resolver splits into Global Resolver + VPC Resolver, and Domains
+// sits after VPC Resolver. "Traffic flow" wasn't visible in the captured
+// scroll region but its absence was never confirmed, so it stays.
+//
+// Two items (marked toast-only below) show pushDemoLimitationToast() instead
+// of navigating — cheaper than building 2 more full ComingSoon routes for
+// items added purely for nav-tree completeness.
+const TOAST_ONLY_HREFS = new Set(["/resolver/global-resolvers", "/resolver/outposts"]);
+
 const NAV_ITEMS: SideNavigationProps["items"] = [
   { type: "link", text: "Dashboard", href: "/dashboard" },
+  { type: "link", text: "Hosted zones", href: "/hosted-zones" },
+  { type: "link", text: "Health checks", href: "/health-checks" },
+  { type: "link", text: "Profiles", href: "/profiles" },
+  { type: "divider" },
+  {
+    type: "section",
+    text: "Global Resolver",
+    items: [
+      { type: "link", text: "Global resolvers", href: "/resolver/global-resolvers", info: <Badge color="blue">New</Badge> },
+    ],
+  },
+  { type: "divider" },
+  {
+    type: "section",
+    text: "VPC Resolver",
+    items: [
+      { type: "link", text: "VPCs", href: "/resolver/vpcs" },
+      { type: "link", text: "Inbound endpoints", href: "/resolver/inbound-endpoints" },
+      { type: "link", text: "Outbound endpoints", href: "/resolver/outbound-endpoints" },
+      { type: "link", text: "Rules", href: "/resolver/rules" },
+      { type: "link", text: "Query logging", href: "/resolver/query-logging" },
+      { type: "link", text: "Outposts", href: "/resolver/outposts" },
+    ],
+  },
   { type: "divider" },
   {
     type: "section",
@@ -34,11 +68,8 @@ const NAV_ITEMS: SideNavigationProps["items"] = [
   { type: "divider" },
   {
     type: "section",
-    text: "Hosted zones",
-    items: [
-      { type: "link", text: "Hosted zones", href: "/hosted-zones" },
-      { type: "link", text: "Health checks", href: "/health-checks" },
-    ],
+    text: "IP-based routing",
+    items: [{ type: "link", text: "CIDR collections", href: "/ip-based-routing/cidr-collections" }],
   },
   { type: "divider" },
   {
@@ -50,26 +81,7 @@ const NAV_ITEMS: SideNavigationProps["items"] = [
     ],
   },
   { type: "divider" },
-  {
-    type: "section",
-    text: "Resolver",
-    items: [
-      { type: "link", text: "VPCs", href: "/resolver/vpcs" },
-      { type: "link", text: "Inbound endpoints", href: "/resolver/inbound-endpoints" },
-      { type: "link", text: "Outbound endpoints", href: "/resolver/outbound-endpoints" },
-      { type: "link", text: "Rules", href: "/resolver/rules" },
-      { type: "link", text: "Query logging", href: "/resolver/query-logging" },
-    ],
-  },
-  { type: "divider" },
-  {
-    type: "section",
-    text: "IP-based routing",
-    items: [{ type: "link", text: "CIDR collections", href: "/ip-based-routing/cidr-collections" }],
-  },
-  { type: "divider" },
   { type: "link", text: "Applications", href: "/applications" },
-  { type: "link", text: "Profiles", href: "/profiles" },
   { type: "link", text: "Test record", href: "/test-record" },
 ];
 
@@ -132,6 +144,10 @@ function ConsoleShell({ children }: { children: React.ReactNode }) {
             activeHref={activeHref}
             onFollow={(event) => {
               event.preventDefault();
+              if (TOAST_ONLY_HREFS.has(event.detail.href)) {
+                pushDemoLimitationToast();
+                return;
+              }
               router.push(event.detail.href);
             }}
           />
