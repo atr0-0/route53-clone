@@ -16,6 +16,11 @@ TypeScript types cannot drift apart.
 
 **Base path** `/api/v1`. In the browser this is reached same-origin through the Next.js rewrite
 ([DD-16](./02-design-decisions.md#dd-16--next-js-rewrite-proxy-instead-of-cross-origin-calls)).
+Slice 0's `next.config.ts` rewrite strips the `/api` segment (`source: "/api/:path*"` →
+`destination: "${BACKEND_ORIGIN}/:path*"`), so **the backend's own FastAPI routers are mounted at
+`/v1`**, not `/api/v1` — e.g. `app.include_router(auth_router, prefix="/v1")`. Hitting the backend
+directly (its public Fly URL, for `/docs`) uses `/v1/...` and unprefixed `/health`; only the
+browser-facing path through the rewrite is `/api/v1/...`.
 
 **Auth** — session JWT in an `HttpOnly; Secure; SameSite=Lax` cookie. Every endpoint except
 `/auth/login` requires it and returns `401` without it.

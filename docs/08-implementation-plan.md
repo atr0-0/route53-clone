@@ -170,7 +170,7 @@ Read: [architecture §4](./04-architecture.md), [API contract §2](./06-api-cont
 
 Build: `core/security.py` (JWT sign/verify, cookie helpers) · `core/errors.py` and its handler ·
 `core/pagination.py` (`Page[T]`) · `auth_service`, `auth` router · frontend login page,
-`middleware.ts` guard, `useSession`, global 401 handling.
+`proxy.ts` guard, `useSession`, global 401 handling.
 
 `errors.py` and `pagination.py` land here because every later slice depends on them.
 

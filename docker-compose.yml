@@ -1,0 +1,28 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////data/route53.db
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-long-random-string}
+      CORS_ORIGINS: http://localhost:3000
+      DEMO_MODE: "true"
+    volumes:
+      - backend_data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_ORIGIN: http://backend:8000
+    ports:
+      - "3000:3000"
+    environment:
+      BACKEND_ORIGIN: http://backend:8000
+      NEXT_PUBLIC_DEMO_MODE: "true"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:

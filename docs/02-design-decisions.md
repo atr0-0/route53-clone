@@ -442,14 +442,14 @@ grader opening the demo in Safari could simply fail to stay logged in, with no o
 
 **Decision.** The browser only ever talks to the Vercel origin. `next.config.ts` rewrites `/api/*`
 to the Fly backend, server-to-server. The cookie becomes first-party `SameSite=Lax`, CORS drops out
-of the browser path entirely, and `middleware.ts` can read the cookie server-side to guard routes
+of the browser path entirely, and `proxy.ts` can read the cookie server-side to guard routes
 before a page renders. The Fly service stays publicly reachable so its `/docs` OpenAPI UI is still
 linkable from the README (`AS-D7`).
 
 **Alternatives considered.**
 - *Direct cross-origin with `SameSite=None; Secure` and a credentialed CORS allow-list.* One fewer
   hop and no Vercel function invocations — but it is precisely the third-party cookie pattern
-  browsers are removing, and `middleware.ts` could not see the cookie, so route guarding would have
+  browsers are removing, and `proxy.ts` could not see the cookie, so route guarding would have
   to move client-side and flash unauthenticated content.
 - *Token in `localStorage` with an `Authorization` header.* Sidesteps cookies entirely and works
   cross-origin. Rejected: readable by any script, which gives up the XSS protection that made

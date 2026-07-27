@@ -15,7 +15,7 @@ flowchart LR
     U[Browser]
 
     subgraph V["Vercel"]
-        MW["middleware.ts<br/>route guard"]
+        MW["proxy.ts<br/>route guard"]
         APP["Next.js App Router<br/>React + Cloudscape"]
         RW["rewrite /api/* → Fly"]
     end
@@ -41,7 +41,7 @@ The Fly service stays publicly reachable so its OpenAPI UI at `/docs` is linkabl
 |---|---|
 | Session cookie | `SameSite=Lax; Secure; HttpOnly` — first-party, so no third-party-cookie blocking |
 | CORS | Not needed for the browser path. Backend keeps a narrow allow-list only for direct `/docs` use |
-| Route guarding | `middleware.ts` reads the cookie server-side and redirects before any page renders |
+| Route guarding | `proxy.ts` reads the cookie server-side and redirects before any page renders |
 | Persistence | SQLite file on a Fly volume, so data survives redeploys (`NFR-12`) |
 
 ---
@@ -149,7 +149,7 @@ No grammar is ever written in TypeScript.
 frontend/src/
   app/
     layout.tsx                     html shell, Cloudscape global CSS, providers
-    middleware.ts                  cookie check → redirect to /login?next=
+    proxy.ts                  cookie check → redirect to /login?next=
     login/page.tsx
     (console)/
       layout.tsx                   AppLayout: SideNavigation, breadcrumbs, Flashbar slot
@@ -202,7 +202,7 @@ Cloudscape is client-only React (risk **R2**). Containment strategy:
 - Global CSS imported **once** in the root `layout.tsx`.
 - `(console)/layout.tsx` is the single `"use client"` boundary holding `AppLayout`; pages below it
   are ordinary client components.
-- The App Router still owns routing, layouts, and `middleware.ts` — so nav, breadcrumbs, and deep
+- The App Router still owns routing, layouts, and `proxy.ts` — so nav, breadcrumbs, and deep
   links stay real URLs rather than client-side view switching.
 - **Prototyped in implementation slice 1**, before any screen depends on it.
 
@@ -213,7 +213,7 @@ Cloudscape is client-only React (risk **R2**). Containment strategy:
 ```mermaid
 sequenceDiagram
     participant B as Browser
-    participant M as middleware.ts
+    participant M as proxy.ts
     participant N as Next.js (rewrite)
     participant A as FastAPI
 
@@ -231,10 +231,16 @@ sequenceDiagram
     A-->>B: 200 {items, page, total, ...}
 ```
 
-`middleware.ts` checks only for the cookie's **presence** — a cheap gate that avoids rendering the
+`proxy.ts` checks only for the cookie's **presence** — a cheap gate that avoids rendering the
 shell for signed-out users. The backend independently verifies the JWT on every request; the
-middleware is never the security boundary. A `401` from any call clears client state and redirects
+proxy is never the security boundary. A `401` from any call clears client state and redirects
 once (`FR-A8`).
+
+**Naming note (2026-07-27):** this document originally named this file `middleware.ts`, correct at
+the time of writing. Next.js 16 deprecated and renamed the `middleware` file convention to `proxy`
+(same purpose — code that runs before a route renders — new file name and exported function name).
+The version actually installed in Slice 0 is 16.2.12, so every reference here uses `proxy.ts`;
+implement it as `frontend/src/proxy.ts` exporting `proxy()`, not `middleware.ts`.
 
 ---
 
