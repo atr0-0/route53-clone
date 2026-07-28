@@ -18,7 +18,6 @@ import { useLogin } from "@/features/auth/queries";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { pushDemoLimitationToast, useFlashItems, dismissFlash } from "@/lib/notifications";
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 const DEMO_USERS = ["admin@example.com", "jane.doe@example.com", "devops@example.com"];
 const DEMO_PASSWORD = "DemoPass123!";
 
@@ -167,12 +166,14 @@ function LoginPageContent() {
                   </SpaceBetween>
                 </Container>
 
-                {DEMO_MODE && (
-                  <Alert type="info" header="Demo credentials">
-                    Sign in with any of <code>{DEMO_USERS.join(", ")}</code> — password{" "}
-                    <code>{DEMO_PASSWORD}</code>
-                  </Alert>
-                )}
+                {/* Always shown, not gated behind an env var — this app mocks
+                    auth entirely (no signup), so hiding these behind a flag
+                    that might not be set in a given deployment just means a
+                    reviewer can't find them. */}
+                <Alert type="info" header="Demo credentials">
+                  Sign in with any of <code>{DEMO_USERS.join(", ")}</code> — password{" "}
+                  <code>{DEMO_PASSWORD}</code>
+                </Alert>
               </SpaceBetween>
             </Grid>
           </div>

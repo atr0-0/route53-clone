@@ -8,8 +8,9 @@ resolution. Not affiliated with, endorsed by, or connected to Amazon Web Service
 **Live demo:** [route67clone.vercel.app](https://route67clone.vercel.app) · backend API docs —
 [atr0.pythonanywhere.com/docs](https://atr0.pythonanywhere.com/docs)
 
-##Demo credentials: `admin@example.com` / `jane.doe@example.com` / `devops@example.com`, password
-`DemoPass123!` for all three.##
+> **Demo credentials:** `admin@example.com` / `jane.doe@example.com` / `devops@example.com` —
+> password `DemoPass123!` for all three. (Also shown directly on the login page.)
+
 <img width="2553" height="1350" alt="image" src="https://github.com/user-attachments/assets/6b708592-61d4-4fde-87ab-de4c573bc9d9" />
 
 ---
