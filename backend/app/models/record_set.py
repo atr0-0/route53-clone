@@ -54,8 +54,12 @@ class RecordSet(Base):
     # duplicate record sets be inserted and break FR-C1 entirely (invariant 4).
     set_identifier: Mapped[str] = mapped_column(String, nullable=False, server_default="")
     routing_policy: Mapped[str] = mapped_column(String, nullable=False, server_default="SIMPLE")
-    routing_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    alias_target: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # none_as_null=True: without it, SQLAlchemy's JSON type stores Python None as the
+    # *JSON literal* `'null'` (a real, non-NULL text value) rather than SQL NULL — so
+    # `.is_(None)`/`.is_not(None)` filters (the Records tab's Alias filter) would match
+    # every row identically regardless of whether it actually has an alias target.
+    routing_config: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
+    alias_target: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     ttl: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())

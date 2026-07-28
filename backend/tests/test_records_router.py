@@ -144,6 +144,56 @@ def test_type_filter_and_search_combine_as_and(authenticated_client):
     assert [r["name"] for r in type_and_search["items"]] == ["findme.filter-combo-test.com"]
 
 
+def test_routing_policy_and_alias_filters(authenticated_client):
+    """Regression test for a real bug: SQLAlchemy's JSON column type stores Python
+    None as the JSON literal 'null' (a non-NULL text value) unless the column is
+    declared with none_as_null=True, which silently broke the alias filter — every
+    row matched `alias=true` identically, regardless of whether it had an alias
+    target, because none of them were ever truly SQL NULL."""
+    zone_id = _create_zone(authenticated_client, "routing-alias-filter-test.com")
+    authenticated_client.post(
+        f"/v1/hosted-zones/{zone_id}/records",
+        json={"name": "plain", "type": "A", "values": ["192.0.2.1"], "ttl": 300},
+    )
+    authenticated_client.post(
+        f"/v1/hosted-zones/{zone_id}/records",
+        json={
+            "name": "weighted",
+            "type": "A",
+            "values": ["192.0.2.2"],
+            "ttl": 300,
+            "routingPolicy": "WEIGHTED",
+            "setIdentifier": "primary",
+            "routingConfig": {"weight": "70"},
+        },
+    )
+    authenticated_client.post(
+        f"/v1/hosted-zones/{zone_id}/records",
+        json={
+            "name": "aliased",
+            "type": "A",
+            "aliasTarget": {"type": "cloudfront", "target": "d123.cloudfront.net"},
+        },
+    )
+
+    weighted_only = authenticated_client.get(
+        f"/v1/hosted-zones/{zone_id}/records", params={"routing_policy": "WEIGHTED"}
+    ).json()
+    assert [r["name"] for r in weighted_only["items"]] == ["weighted.routing-alias-filter-test.com"]
+
+    alias_true = authenticated_client.get(
+        f"/v1/hosted-zones/{zone_id}/records", params={"alias": "true"}
+    ).json()
+    assert [r["name"] for r in alias_true["items"]] == ["aliased.routing-alias-filter-test.com"]
+
+    alias_false = authenticated_client.get(
+        f"/v1/hosted-zones/{zone_id}/records", params={"alias": "false"}
+    ).json()
+    # SOA + apex NS (both auto-created, non-alias) + plain + weighted = 4
+    assert alias_false["total"] == 4
+    assert "aliased.routing-alias-filter-test.com" not in {r["name"] for r in alias_false["items"]}
+
+
 def test_get_record_types_returns_all_nine_with_metadata(authenticated_client):
     """AC-11's backend half: the create form's validation comes from this payload."""
     response = authenticated_client.get("/v1/record-types")

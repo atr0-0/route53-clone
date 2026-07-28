@@ -202,11 +202,12 @@ both explained in §2 above. [SRS §14.2](./01-requirements.md) separately lists
 - The hosted backend runs on a free tier and may cold-start on the first request after a period of
   inactivity.
 - **The live backend may briefly lag the live frontend after a UI-only session.** Vercel redeploys
-  automatically on push, but the PythonAnywhere backend does not — it needs a manual `git pull` and
-  web-app reload. If the frontend has shipped ahead of that (as it did for the Records tab's Routing
-  policy/Alias filters — real, backend-filtered params added in the same session as the UI revamp),
-  those specific dropdowns render correctly but silently filter nothing on the live demo until the
-  backend catches up, since FastAPI ignores unrecognised query parameters rather than erroring.
+  automatically on push, but the PythonAnywhere backend does not — it needs a manual `git pull`,
+  `alembic upgrade head` (migration `0002` — [DD-26](./02-design-decisions.md#dd-26--sqlalchemy-json-columns-need-none_as_nulltrue-for-isnone-filters-to-work)
+  — is a real data fix, not optional), and a web-app reload. Until that happens, the Records tab's
+  Routing policy/Alias filter dropdowns render correctly but the Alias filter specifically will
+  misbehave against whatever pre-migration data is already on the live demo (matching every row for
+  `alias=true`, none for `alias=false`) rather than simply doing nothing.
 
 ---
 

@@ -34,6 +34,7 @@ appended as Phases 2–6 proceed; existing entries are never edited, only supers
 | [DD-23](#dd-23--multi-record-quick-create-built-for-real) | Multi-record quick create built for real | Accepted |
 | [DD-24](#dd-24--record-detail-split-panel-threaded-via-react-context) | Record-detail split panel threaded via React Context | Accepted |
 | [DD-25](#dd-25--three-cloudscapenextjs-gotchas-found-during-the-revamp) | Three Cloudscape/Next.js gotchas found during the revamp | Accepted |
+| [DD-26](#dd-26--sqlalchemy-json-columns-need-none_as_nulltrue-for-isnone-filters-to-work) | SQLAlchemy JSON columns need `none_as_null=True` for `.is_(None)` filters to work | Accepted |
 
 ---
 
@@ -398,6 +399,11 @@ alias record, and TTL is then required to be null.
 **Trade-off accepted.** A JSON column is opaque to SQL queries — deliberate, since nothing ever
 queries inside it. The mutual exclusion between `alias_target` and `ttl` is enforced in the service
 layer rather than by the schema, and needs its own test.
+
+**Revised 2026-07-28**: "alias targets are never filtered on" stopped being true once the Records
+tab's Alias filter was added (alongside the UI revamp's Routing policy filter) — and that filter
+turned out to be broken by a JSON-column default neither this entry nor DD-21's revamp caught at the
+time. See [DD-26](#dd-26--sqlalchemy-json-columns-need-none_as_nulltrue-for-isnone-filters-to-work).
 
 ---
 
@@ -870,3 +876,53 @@ found only because the revamp's verification loop (build → screenshot → **dr
 interaction in a real browser**) went past visual comparison into functional exercising. This is the
 argument for keeping that loop even on stage-2/polish work, not just structural stage 1
 ([DD-20](#dd-20--two-stage-implementation-structural-then-additive)).
+
+---
+
+## DD-26 — SQLAlchemy JSON columns need `none_as_null=True` for `.is_(None)` filters to work
+
+**Status:** Accepted · Revises [DD-14](#dd-14--alias-target-as-a-nullable-json-column)
+
+**Context.** Adding a genuine alias record to the demo seed data (to give the Records tab's Alias
+filter something real to match) surfaced a bug: `?alias=true` returned **every** record in the zone,
+not just the one with an alias target, and `?alias=false` would have returned zero. The repository
+filter itself was correct —
+`RecordSet.alias_target.is_not(None) if alias else RecordSet.alias_target.is_(None)` — but a raw
+`sqlite3` query against the actual database file showed every row's `alias_target` column held the
+four-character **text** `'null'`, not SQL `NULL`. SQLAlchemy's `JSON` type, as declared in
+[DD-14](#dd-14--alias-target-as-a-nullable-json-column) (`mapped_column(JSON, nullable=True)`),
+serialises a Python `None` assignment to the **JSON literal** `null` by default — a real, non-NULL
+value at the SQL level — so `IS NULL`/`IS NOT NULL` comparisons against it are meaningless: every row
+written that way is simultaneously "not SQL NULL" and "semantically empty," and no query can tell the
+two apart. `routing_config` (added in the same DD-14 decision) has the identical defect, currently
+latent only because nothing filters on it yet.
+
+**Decision — three parts.**
+
+1. **Fix the write path.** Both `alias_target` and `routing_config` now use
+   `mapped_column(JSON(none_as_null=True), nullable=True)` — SQLAlchemy's own escape hatch for
+   exactly this case, which makes a Python `None` assignment write real SQL `NULL` instead of the
+   JSON literal.
+2. **Repair existing rows.** Migration `0002` runs `UPDATE record_sets SET alias_target = NULL WHERE
+   alias_target = 'null'` (and the same for `routing_config`) — a data-only fix, no structural
+   change, since SQLite's `JSON` type is just `TEXT` under the hood either way.
+3. **A regression test** (`test_routing_policy_and_alias_filters`) creates a plain record, a weighted
+   record, and a genuinely aliased record, and asserts `alias=true`/`alias=false` partition them
+   correctly — confirmed to fail against the pre-fix model (reverting the model change alone, without
+   the migration, reproduces the original symptom) and pass against the fix.
+
+**Alternatives considered.**
+- *Filter in Python after fetching, checking `record.alias_target is not None` in the ORM layer
+  instead of in SQL.* Sidesteps the column-type issue entirely, but throws away the point of a
+  server-side filter (invariant 11) — every row would need to be fetched before any of them could be
+  excluded, defeating pagination.
+- *Compare against the string `'null'` explicitly in the filter* (`alias_target != 'null'`) instead of
+  fixing the column type. Would have worked without a migration, but it encodes the bug's symptom
+  into the query forever, and the same mistake could reappear the next time a JSON column gets a
+  nullable filter.
+
+**Trade-off accepted.** A migration whose only job is repairing data that a prior decision (DD-14)
+wrote incorrectly from day one — evidence that a JSON-typed column's `None` handling deserves a
+test the first time such a column gains a nullability filter, not after. `routing_config` is fixed
+alongside `alias_target` even though nothing queries it yet, specifically so this doesn't recur the
+next time it does.

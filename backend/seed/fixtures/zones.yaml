@@ -38,6 +38,17 @@
     - { name: _sip._tcp.example.com,   type: SRV,   ttl: 300,   values: ["10 5 5060 sipserver.example.com"] }
     - { name: _sips._tcp.example.com,  type: SRV,   ttl: 300,   values: ["10 5 5061 sipserver.example.com"] }
     - { name: example.com,             type: CAA,   ttl: 300,   values: ['0 issue "letsencrypt.org"'] }
+    # Non-Simple routing policy and an alias record — kept out of the plain A-record
+    # block above since both need extra fields. Gives the Records tab's Routing
+    # policy and Alias filters (added alongside the routing_policy/alias query
+    # params) something real to filter for, instead of every seeded row being
+    # Simple/non-alias.
+    - { name: weighted-app.example.com, type: A, ttl: 60, set_identifier: primary,
+        routing_policy: WEIGHTED, routing_config: { weight: "70" }, values: [192.0.2.200] }
+    - { name: weighted-app.example.com, type: A, ttl: 60, set_identifier: secondary,
+        routing_policy: WEIGHTED, routing_config: { weight: "30" }, values: [192.0.2.201] }
+    - { name: assets-alias.example.com, type: A,
+        alias_target: { type: cloudfront, target: d5rzlx3zjvzxi.cloudfront.net } }
 
 - name: shopfront.io
   type: PUBLIC

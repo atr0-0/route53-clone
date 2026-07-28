@@ -93,8 +93,12 @@ def seed_zones(session, users_by_email: dict[str, User]) -> None:
                 hosted_zone_id=zone.id,
                 name=record["name"],
                 type=record["type"],
-                values=[str(v) for v in record["values"]],
+                values=[str(v) for v in record.get("values", [])],
                 ttl=record.get("ttl"),
+                set_identifier=record.get("set_identifier", ""),
+                routing_policy=record.get("routing_policy", "SIMPLE"),
+                routing_config=record.get("routing_config"),
+                alias_target=record.get("alias_target"),
             )
         session.commit()
 
